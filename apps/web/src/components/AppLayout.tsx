@@ -5,6 +5,7 @@ import { startBackgroundSync } from '../lib/sync'
 const tabs = [
   { to: '/', label: 'Início' },
   { to: '/treinos', label: 'Treinos' },
+  { to: '/dieta', label: 'Dieta' },
   { to: '/progresso', label: 'Progresso' },
 ]
 
