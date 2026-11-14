@@ -8,6 +8,12 @@ import './index.css'
 import { AuthPage } from './pages/AuthPage'
 import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
+import { BodyTab } from './pages/progress/BodyTab'
+import { ExerciseProgressPage } from './pages/progress/ExerciseProgressPage'
+import { HistoryTab } from './pages/progress/HistoryTab'
+import { ProgressPage } from './pages/progress/ProgressPage'
+import { RecordsTab } from './pages/progress/RecordsTab'
+import { SessionDetailPage } from './pages/progress/SessionDetailPage'
 import { SessionPage } from './pages/SessionPage'
 import { TemplateEditorPage } from './pages/TemplateEditorPage'
 import { WorkoutsPage } from './pages/WorkoutsPage'
@@ -25,7 +31,14 @@ createRoot(document.getElementById('root')!).render(
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
               <Route path="/treinos" element={<WorkoutsPage />} />
+              <Route path="/progresso" element={<ProgressPage />}>
+                <Route index element={<HistoryTab />} />
+                <Route path="recordes" element={<RecordsTab />} />
+                <Route path="corpo" element={<BodyTab />} />
+              </Route>
             </Route>
+            <Route path="/progresso/treino/:id" element={<SessionDetailPage />} />
+            <Route path="/progresso/exercicio/:id" element={<ExerciseProgressPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/treinos/nova" element={<TemplateEditorPage />} />
             <Route path="/treinos/:id" element={<TemplateEditorPage />} />

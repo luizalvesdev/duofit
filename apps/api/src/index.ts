@@ -4,6 +4,7 @@ import type { AppEnv } from './env'
 import { auth } from './routes/auth'
 import { exerciseRoutes } from './routes/exercises'
 import { profile } from './routes/profile'
+import { progressRoutes } from './routes/progress'
 import { sessionRoutes } from './routes/sessions'
 import { templateRoutes } from './routes/templates'
 
@@ -15,6 +16,7 @@ const app = new Hono<AppEnv>()
   .route('/exercises', exerciseRoutes)
   .route('/templates', templateRoutes)
   .route('/sessions', sessionRoutes)
+  .route('/progress', progressRoutes)
 
 export type AppType = typeof app
 export default app

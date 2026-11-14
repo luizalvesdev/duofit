@@ -1,8 +1,62 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useMemo, useState } from 'react'
+import { api } from '../lib/api'
 import { db } from '../lib/db'
-import { equipmentLabels, exerciseImage, muscleLabels, type Exercise, type Muscle } from '../lib/workout'
-import { Input } from './ui'
+import { refreshCache } from '../lib/sync'
+import { equipmentLabels, exerciseImage, muscleLabels, type Equipment, type Exercise, type Muscle } from '../lib/workout'
+import { Button, ErrorText, Field, Input, Select } from './ui'
+
+function CreateExercise({ initialName, onCreated, onCancel }: {
+  initialName: string
+  onCreated: (exercise: Exercise) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(initialName)
+  const [primaryMuscle, setMuscle] = useState<Muscle>('chest')
+  const [equipment, setEquipment] = useState<Equipment>('machine')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    if (name.trim().length < 2) return setError('Dê um nome ao exercício.')
+    setSaving(true)
+    try {
+      const { exercise } = await api<{ exercise: Exercise }>('/exercises', {
+        method: 'POST',
+        body: { name, primaryMuscle, equipment },
+      })
+      await refreshCache()
+      onCreated(exercise)
+    } catch {
+      setError('Não foi possível criar. Precisa de internet.')
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="grid gap-4 p-4">
+      <h2 className="text-lg font-semibold">Novo exercício</h2>
+      <Field label="Nome">
+        <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} maxLength={80} placeholder="Supino máquina articulada" />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Músculo principal">
+          <Select value={primaryMuscle} onChange={(e) => setMuscle(e.target.value as Muscle)}>
+            {Object.entries(muscleLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select>
+        </Field>
+        <Field label="Equipamento">
+          <Select value={equipment} onChange={(e) => setEquipment(e.target.value as Equipment)}>
+            {Object.entries(equipmentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <ErrorText>{error}</ErrorText>
+      <Button onClick={save} disabled={saving}>{saving ? 'Criando…' : 'Criar e adicionar'}</Button>
+      <button onClick={onCancel} className="text-sm text-zinc-500">Cancelar</button>
+    </div>
+  )
+}
 
 const normalize = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
@@ -21,6 +75,7 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
   const exercises = useLiveQuery(() => db.exercises.orderBy('name').toArray(), [], [])
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<Muscle | null>(null)
+  const [creating, setCreating] = useState(false)
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
@@ -28,6 +83,14 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
       (e) => (!muscle || e.primaryMuscle === muscle) && (!q || normalize(e.name).includes(q)),
     )
   }, [exercises, query, muscle])
+
+  if (creating) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950">
+        <CreateExercise initialName={query} onCreated={onSelect} onCancel={() => setCreating(false)} />
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950">
@@ -68,7 +131,12 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
             </button>
           </li>
         ))}
-        {filtered.length === 0 && <li className="py-10 text-center text-zinc-500">Nenhum exercício encontrado.</li>}
+        {filtered.length === 0 && <li className="py-6 text-center text-zinc-500">Nenhum exercício encontrado.</li>}
+        <li>
+          <button onClick={() => setCreating(true)} className="w-full py-4 text-center text-lime-400">
+            + Criar exercício {query.trim() && `"${query.trim()}"`}
+          </button>
+        </li>
       </ul>
     </div>
   )
