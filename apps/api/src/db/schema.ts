@@ -82,7 +82,7 @@ export const workoutTemplates = pgTable('workout_templates', {
 export const templateExercises = pgTable('template_exercises', {
   id: uuid().primaryKey().defaultRandom(),
   templateId: uuid().notNull().references(() => workoutTemplates.id, { onDelete: 'cascade' }),
-  exerciseId: uuid().notNull().references(() => exercises.id),
+  exerciseId: uuid().notNull().references(() => exercises.id, { onDelete: 'cascade' }),
   position: smallint().notNull(),
   targetSets: smallint().notNull(),
   repMin: smallint().notNull(),
@@ -104,7 +104,7 @@ export const workoutSessions = pgTable('workout_sessions', {
 export const sessionSets = pgTable('session_sets', {
   id: uuid().primaryKey(),
   sessionId: uuid().notNull().references(() => workoutSessions.id, { onDelete: 'cascade' }),
-  exerciseId: uuid().notNull().references(() => exercises.id),
+  exerciseId: uuid().notNull().references(() => exercises.id, { onDelete: 'cascade' }),
   exercisePosition: smallint().notNull(),
   setPosition: smallint().notNull(),
   setType: setTypeEnum().notNull().default('normal'),
@@ -116,7 +116,7 @@ export const sessionSets = pgTable('session_sets', {
 export const personalRecords = pgTable('personal_records', {
   id: uuid().primaryKey(),
   userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
-  exerciseId: uuid().notNull().references(() => exercises.id),
+  exerciseId: uuid().notNull().references(() => exercises.id, { onDelete: 'cascade' }),
   setId: uuid().notNull().references(() => sessionSets.id, { onDelete: 'cascade' }),
   kind: recordKindEnum().notNull(),
   value: numeric({ precision: 7, scale: 2, mode: 'number' }).notNull(),
