@@ -13,7 +13,7 @@ export function WorkoutsPage() {
   const today = new Date().getDay()
   const names = new Map(exercises.map((e) => [e.id, e.name]))
 
-  async function start(template: Template | null) {
+  async function start(template: Template) {
     if (active && !confirm('Já existe um treino em andamento. Descartar e começar outro?')) return
     await startSession(template)
     navigate('/treino')
@@ -67,12 +67,8 @@ export function WorkoutsPage() {
       ))}
 
       {templates.length === 0 && (
-        <p className="py-6 text-center text-zinc-500">Nenhuma ficha ainda. Crie a primeira ou faça um treino livre.</p>
+        <p className="py-6 text-center text-zinc-500">Nenhuma ficha ainda. Crie a primeira para começar a treinar.</p>
       )}
-
-      <button onClick={() => start(null)} className="rounded-xl border border-zinc-800 py-3 text-zinc-300">
-        Treino livre (sem ficha)
-      </button>
     </main>
   )
 }

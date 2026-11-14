@@ -263,9 +263,7 @@ export function SessionPage() {
       {notStarted && (
         <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
           <p className="text-sm text-zinc-400">
-            {session.exercises.length === 0
-              ? 'Adicione os exercícios e inicie quando for treinar.'
-              : 'Revise os exercícios e inicie quando for treinar.'}
+            Revise os exercícios e inicie quando for treinar.
           </p>
           <button onClick={startClock} className="rounded-xl bg-lime-400 py-3 font-bold text-zinc-950">▶ Iniciar treino</button>
           <p className="text-xs text-zinc-600">Se você concluir uma série antes, o cronômetro começa sozinho.</p>

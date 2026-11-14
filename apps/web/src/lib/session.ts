@@ -21,24 +21,22 @@ async function prefill(exerciseId: string, count: number): Promise<ActiveSet[]> 
   })
 }
 
-export async function startSession(template: Template | null) {
-  const exercises: ActiveExercise[] = template
-    ? await Promise.all(
-        template.items.map(async (item) => ({
-          exerciseId: item.exerciseId,
-          restSeconds: item.restSeconds,
-          repMin: item.repMin,
-          repMax: item.repMax,
-          sets: await prefill(item.exerciseId, item.targetSets),
-        })),
-      )
-    : []
+export async function startSession(template: Template) {
+  const exercises: ActiveExercise[] = await Promise.all(
+    template.items.map(async (item) => ({
+      exerciseId: item.exerciseId,
+      restSeconds: item.restSeconds,
+      repMin: item.repMin,
+      repMax: item.repMax,
+      sets: await prefill(item.exerciseId, item.targetSets),
+    })),
+  )
 
   await db.active.put({
     id: 'active',
     sessionId: crypto.randomUUID(),
-    templateId: template?.id ?? null,
-    name: template?.name ?? 'Treino livre',
+    templateId: template.id,
+    name: template.name,
     startedAt: null,
     elapsedMs: 0,
     runningSince: null,
