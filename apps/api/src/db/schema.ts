@@ -98,6 +98,7 @@ export const workoutSessions = pgTable('workout_sessions', {
   name: text().notNull(),
   startedAt: timestamp({ withTimezone: true }).notNull(),
   finishedAt: timestamp({ withTimezone: true }).notNull(),
+  durationSeconds: integer().notNull().default(0),
   notes: text(),
 }, (t) => [index().on(t.userId, t.startedAt)])
 

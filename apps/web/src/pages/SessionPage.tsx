@@ -3,16 +3,20 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
 import { ExercisePicker, ExerciseThumb } from '../components/ExercisePicker'
 import { NumericInput } from '../components/NumericInput'
+import { SwipeToDelete } from '../components/SwipeToDelete'
 import { db, type ActiveExercise, type LastPerformance } from '../lib/db'
 import {
   addExercise,
   addSet,
   cycleSetType,
   discardSession,
+  elapsedSeconds,
   finishSession,
+  pauseClock,
   removeExercise,
   removeSet,
   setRest,
+  startClock,
   toggleComplete,
   updateSet,
 } from '../lib/session'
@@ -117,6 +121,7 @@ function ExerciseCard({ exercise, block, index, last }: {
 
         return (
           <div key={set.id} className="grid gap-2">
+            <SwipeToDelete onDelete={() => removeSet(index, setIndex)}>
             <div className={`grid grid-cols-[2.5rem_1fr_4.5rem_4rem_2.75rem] items-center gap-2 rounded-lg ${done ? 'bg-lime-400/10' : ''}`}>
               <button
                 onClick={() => setMenuFor(menuFor === setIndex ? null : setIndex)}
@@ -138,6 +143,7 @@ function ExerciseCard({ exercise, block, index, last }: {
                 ✓
               </button>
             </div>
+            </SwipeToDelete>
 
             {set.records.length > 0 && (
               <p className="pl-12 text-xs font-semibold text-lime-400">🏆 {set.records.map((k) => recordLabels[k]).join(' · ')}</p>
@@ -173,6 +179,9 @@ function ExerciseCard({ exercise, block, index, last }: {
       })}
 
       <button onClick={() => addSet(index)} className="rounded-lg bg-zinc-800/60 py-2 text-sm text-zinc-300">+ Série</button>
+      {block.sets.length > 0 && index === 0 && (
+        <p className="text-center text-xs text-zinc-600">Para excluir uma série, deslize para a esquerda ou toque no número dela</p>
+      )}
     </section>
   )
 }
@@ -208,7 +217,9 @@ export function SessionPage() {
 
   const byId = new Map(exercises.map((e) => [e.id, e]))
   const lastById = new Map(lastPerformance.map((l) => [l.exerciseId, l]))
-  const elapsed = Math.floor((now - new Date(session.startedAt).getTime()) / 1000)
+  const elapsed = elapsedSeconds(session, now)
+  const running = session.runningSince !== null
+  const notStarted = session.startedAt === null
   const completed = session.exercises.reduce((sum, e) => sum + e.sets.filter((s) => s.completedAt).length, 0)
 
   async function finish() {
@@ -227,12 +238,39 @@ export function SessionPage() {
   return (
     <main className="mx-auto grid max-w-md gap-4 px-4 pb-32 pt-6">
       <header className="sticky top-0 z-30 -mx-4 flex items-center justify-between bg-zinc-950/95 px-4 py-3 backdrop-blur">
-        <div>
-          <h1 className="font-bold">{session.name}</h1>
-          <p className="text-sm tabular-nums text-zinc-500">{formatDuration(elapsed)} · {completed} séries</p>
+        <div className="flex items-center gap-3">
+          {!notStarted && (
+            <button
+              onClick={running ? pauseClock : startClock}
+              aria-label={running ? 'Pausar' : 'Retomar'}
+              className={`grid h-10 w-10 place-items-center rounded-full ${running ? 'bg-zinc-800 text-zinc-200' : 'bg-amber-400 text-zinc-950'}`}
+            >
+              {running ? '❚❚' : '▶'}
+            </button>
+          )}
+          <div>
+            <h1 className="font-bold">{session.name}</h1>
+            <p className="text-sm tabular-nums text-zinc-500">
+              {notStarted ? 'Não iniciado' : formatDuration(elapsed)}
+              {!notStarted && !running && <span className="ml-1 text-amber-400">pausado</span>}
+              {' · '}{completed} séries
+            </p>
+          </div>
         </div>
         <button onClick={finish} className="rounded-xl bg-lime-400 px-4 py-2 font-semibold text-zinc-950">Finalizar</button>
       </header>
+
+      {notStarted && (
+        <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center">
+          <p className="text-sm text-zinc-400">
+            {session.exercises.length === 0
+              ? 'Adicione os exercícios e inicie quando for treinar.'
+              : 'Revise os exercícios e inicie quando for treinar.'}
+          </p>
+          <button onClick={startClock} className="rounded-xl bg-lime-400 py-3 font-bold text-zinc-950">▶ Iniciar treino</button>
+          <p className="text-xs text-zinc-600">Se você concluir uma série antes, o cronômetro começa sozinho.</p>
+        </div>
+      )}
 
       {session.exercises.map((block, index) => (
         <ExerciseCard

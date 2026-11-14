@@ -34,6 +34,7 @@ const sessionSchema = z.object({
   name: z.string().trim().min(1).max(60),
   startedAt: z.iso.datetime(),
   finishedAt: z.iso.datetime(),
+  durationSeconds: z.number().int().min(0).max(60 * 60 * 12).default(0),
   notes: z.string().trim().max(500).nullable().default(null),
   sets: z.array(setSchema).max(300),
   records: z.array(recordSchema).max(300).default([]),

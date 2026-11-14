@@ -23,7 +23,9 @@ export type ActiveSession = {
   sessionId: string
   templateId: string | null
   name: string
-  startedAt: string
+  startedAt: string | null
+  elapsedMs: number
+  runningSince: number | null
   restEndsAt: number | null
   exercises: ActiveExercise[]
 }
@@ -56,3 +58,10 @@ db.version(1).stores({
   active: 'id',
   outbox: 'id, createdAt',
 })
+
+db.version(2).stores({}).upgrade((tx) =>
+  tx.table('active').toCollection().modify((session) => {
+    session.elapsedMs ??= 0
+    session.runningSince ??= session.startedAt ? Date.parse(session.startedAt) : null
+  }),
+)

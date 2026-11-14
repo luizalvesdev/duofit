@@ -39,7 +39,9 @@ export async function startSession(template: Template | null) {
     sessionId: crypto.randomUUID(),
     templateId: template?.id ?? null,
     name: template?.name ?? 'Treino livre',
-    startedAt: new Date().toISOString(),
+    startedAt: null,
+    elapsedMs: 0,
+    runningSince: null,
     restEndsAt: null,
     exercises,
   })
@@ -97,6 +99,10 @@ export async function toggleComplete(exerciseIndex: number, setIndex: number): P
   await mutate((s) => {
     Object.assign(s.exercises[exerciseIndex].sets[setIndex], { completedAt: new Date().toISOString(), records })
     s.restEndsAt = Date.now() + exercise.restSeconds * 1000
+    if (!s.startedAt) {
+      s.startedAt = new Date().toISOString()
+      s.runningSince = Date.now()
+    }
   })
   return records
 }
@@ -125,6 +131,23 @@ export const removeExercise = (exerciseIndex: number) =>
     s.exercises.splice(exerciseIndex, 1)
   })
 
+export const elapsedSeconds = (session: Pick<ActiveSession, 'elapsedMs' | 'runningSince'>, now = Date.now()) =>
+  Math.floor((session.elapsedMs + (session.runningSince ? now - session.runningSince : 0)) / 1000)
+
+export const startClock = () =>
+  mutate((s) => {
+    if (s.runningSince) return
+    s.startedAt ??= new Date().toISOString()
+    s.runningSince = Date.now()
+  })
+
+export const pauseClock = () =>
+  mutate((s) => {
+    if (!s.runningSince) return
+    s.elapsedMs += Date.now() - s.runningSince
+    s.runningSince = null
+  })
+
 export const setRest = (restEndsAt: number | null) =>
   mutate((s) => {
     s.restEndsAt = restEndsAt
@@ -137,6 +160,7 @@ export async function finishSession() {
   if (!session) return
 
   const finishedAt = new Date().toISOString()
+  const durationSeconds = elapsedSeconds(session)
   const sets = session.exercises.flatMap((exercise, exercisePosition) =>
     exercise.sets
       .filter((set) => set.completedAt && set.weightKg !== null && set.reps !== null)
@@ -170,8 +194,9 @@ export async function finishSession() {
     id: session.sessionId,
     templateId: session.templateId,
     name: session.name,
-    startedAt: session.startedAt,
+    startedAt: session.startedAt ?? finishedAt,
     finishedAt,
+    durationSeconds,
     notes: null,
     sets: sets.map(({ records: _records, ...set }) => set),
     records: [...finalRecords.values()].map((r) => ({ id: crypto.randomUUID(), ...r })),
