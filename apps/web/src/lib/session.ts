@@ -79,30 +79,43 @@ async function runningBest(session: ActiveSession, exerciseId: string, skipSetId
   return best
 }
 
-export async function toggleComplete(exerciseIndex: number, setIndex: number): Promise<RecordKind[]> {
+export type CompleteResult = { ok: true; records: RecordKind[] } | { ok: false; missing: ('weight' | 'reps')[] }
+
+export async function toggleComplete(
+  exerciseIndex: number,
+  setIndex: number,
+  fallback: { weightKg: number | null; reps: number | null },
+): Promise<CompleteResult> {
   const session = await db.active.get('active')
-  if (!session) return []
+  if (!session) return { ok: true, records: [] }
   const exercise = session.exercises[exerciseIndex]
   const set = exercise.sets[setIndex]
 
   if (set.completedAt) {
     await mutate((s) => Object.assign(s.exercises[exerciseIndex].sets[setIndex], { completedAt: null, records: [] }))
-    return []
+    return { ok: true, records: [] }
   }
-  if (set.weightKg === null || set.reps === null) return []
+
+  // Empty fields take the placeholder (last session / bodyweight = 0), like Hevy.
+  const weightKg = set.weightKg ?? fallback.weightKg
+  const reps = set.reps ?? fallback.reps
+  const missing = [...(weightKg === null ? ['weight' as const] : []), ...(reps === null ? ['reps' as const] : [])]
+  if (missing.length) return { ok: false, missing }
+  set.weightKg = weightKg
+  set.reps = reps
 
   const best = await runningBest(session, exercise.exerciseId, set.id)
-  const records = detectRecords({ setType: set.setType, weightKg: set.weightKg, reps: set.reps }, best)
+  const records = detectRecords({ setType: set.setType, weightKg: weightKg!, reps: reps! }, best)
 
   await mutate((s) => {
-    Object.assign(s.exercises[exerciseIndex].sets[setIndex], { completedAt: new Date().toISOString(), records })
+    Object.assign(s.exercises[exerciseIndex].sets[setIndex], { weightKg, reps, completedAt: new Date().toISOString(), records })
     s.restEndsAt = Date.now() + exercise.restSeconds * 1000
     if (!s.startedAt) {
       s.startedAt = new Date().toISOString()
       s.runningSince = Date.now()
     }
   })
-  return records
+  return { ok: true, records }
 }
 
 export const addSet = (exerciseIndex: number) =>

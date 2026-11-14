@@ -75,10 +75,25 @@ function ExerciseCard({ exercise, block, index, last }: {
 }) {
   const [menuFor, setMenuFor] = useState<number | null>(null)
   const [celebrate, setCelebrate] = useState<RecordKind[] | null>(null)
+  const [missing, setMissing] = useState<{ setIndex: number; fields: ('weight' | 'reps')[] } | null>(null)
   let workingNumber = 0
 
+  const fallbackFor = (setIndex: number) => {
+    const previous = last?.sets[setIndex]
+    return {
+      weightKg: previous?.weightKg ?? (exercise?.equipment === 'bodyweight' ? 0 : null),
+      reps: previous?.reps ?? null,
+    }
+  }
+
   async function complete(setIndex: number) {
-    const records = await toggleComplete(index, setIndex)
+    const result = await toggleComplete(index, setIndex, fallbackFor(setIndex))
+    if (!result.ok) {
+      setMissing({ setIndex, fields: result.missing })
+      return
+    }
+    setMissing(null)
+    const records = result.records
     if (records.length) {
       setCelebrate(records)
       navigator.vibrate?.(300)
@@ -132,18 +147,34 @@ function ExerciseCard({ exercise, block, index, last }: {
               <span className="truncate text-sm text-zinc-500">
                 {previous ? `${formatKg(previous.weightKg)} × ${previous.reps}` : '—'}
               </span>
-              <NumericInput decimal value={set.weightKg} onCommit={(v) => updateSet(index, setIndex, { weightKg: v })} placeholder="kg" />
-              <NumericInput value={set.reps} onCommit={(v) => updateSet(index, setIndex, { reps: v })} placeholder="0" />
+              <NumericInput
+                decimal
+                value={set.weightKg}
+                onCommit={(v) => updateSet(index, setIndex, { weightKg: v })}
+                placeholder={fallbackFor(setIndex).weightKg !== null ? formatKg(fallbackFor(setIndex).weightKg!) : 'kg'}
+                invalid={missing?.setIndex === setIndex && missing.fields.includes('weight') && set.weightKg === null}
+              />
+              <NumericInput
+                value={set.reps}
+                onCommit={(v) => updateSet(index, setIndex, { reps: v })}
+                placeholder={previous ? String(previous.reps) : block.repMin !== null ? `${block.repMin}-${block.repMax}` : 'reps'}
+                invalid={missing?.setIndex === setIndex && missing.fields.includes('reps') && set.reps === null}
+              />
               <button
                 onClick={() => complete(setIndex)}
-                disabled={!done && (set.weightKg === null || set.reps === null)}
                 aria-label="Concluir série"
-                className={`h-9 rounded-lg font-bold disabled:opacity-30 ${done ? 'bg-lime-400 text-zinc-950' : 'bg-zinc-800 text-zinc-400'}`}
+                className={`h-9 rounded-lg font-bold ${done ? 'bg-lime-400 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}
               >
                 ✓
               </button>
             </div>
             </SwipeToDelete>
+
+            {missing?.setIndex === setIndex && !done && (set.weightKg === null || set.reps === null) && (
+              <p className="pl-12 text-xs text-red-400">
+                Preencha {missing.fields.map((f) => (f === 'weight' ? 'a carga (kg)' : 'as repetições')).join(' e ')}.
+              </p>
+            )}
 
             {set.records.length > 0 && (
               <p className="pl-12 text-xs font-semibold text-lime-400">🏆 {set.records.map((k) => recordLabels[k]).join(' · ')}</p>

@@ -7,11 +7,12 @@ const parse = (text: string) => {
 
 const format = (value: number | null) => (value === null ? '' : String(value).replace('.', ','))
 
-export function NumericInput({ value, onCommit, decimal = false, placeholder, className = '' }: {
+export function NumericInput({ value, onCommit, decimal = false, placeholder, invalid = false, className = '' }: {
   value: number | null
   onCommit: (value: number | null) => void
   decimal?: boolean
   placeholder?: string
+  invalid?: boolean
   className?: string
 }) {
   const [text, setText] = useState(format(value))
@@ -37,7 +38,7 @@ export function NumericInput({ value, onCommit, decimal = false, placeholder, cl
         onCommit(parse(next))
       }}
       onBlur={() => setFocused(false)}
-      className={`w-full rounded-lg bg-zinc-800 py-2 text-center font-semibold outline-none focus:ring-1 focus:ring-lime-400 ${className}`}
+      className={`w-full rounded-lg bg-zinc-800 py-2 text-center font-semibold outline-none placeholder:font-normal placeholder:text-zinc-500 focus:ring-1 focus:ring-lime-400 ${invalid ? 'ring-1 ring-red-500' : ''} ${className}`}
     />
   )
 }
