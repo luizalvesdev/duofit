@@ -1,0 +1,9 @@
+{
+  "name": "duofit",
+  "private": true,
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run dev -w api"
+  }
+}
