@@ -1,33 +1,58 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import { api, tokenStore } from '../lib/api'
+import { api, ApiError, tokenStore } from '../lib/api'
+import { db } from '../lib/db'
 import type { User } from '../lib/types'
 
 type AuthResponse = { user: User; token: string }
+
+const USER_KEY = 'duofit.user'
+
+const cachedUser = (): User | null => {
+  try {
+    return JSON.parse(localStorage.getItem(USER_KEY) ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+const clearLocalData = () => Promise.all(db.tables.map((table) => table.clear()))
 
 type AuthState = {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (input: { email: string; password: string; name: string; inviteCode: string }) => Promise<void>
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(() => tokenStore.get() !== null)
+  const [user, setUser] = useState<User | null>(() => (tokenStore.get() ? cachedUser() : null))
+  const [loading, setLoading] = useState(() => tokenStore.get() !== null && cachedUser() === null)
 
   useEffect(() => {
     if (!tokenStore.get()) return
     api<{ user: User }>('/auth/me')
-      .then(({ user }) => setUser(user))
-      .catch(() => tokenStore.clear())
+      .then(({ user }) => {
+        localStorage.setItem(USER_KEY, JSON.stringify(user))
+        setUser(user)
+      })
+      .catch((error) => {
+        // Offline at the gym: keep the cached session instead of logging out.
+        if (error instanceof ApiError && error.status === 401) {
+          tokenStore.clear()
+          localStorage.removeItem(USER_KEY)
+          setUser(null)
+        }
+      })
       .finally(() => setLoading(false))
   }, [])
 
-  const handleAuth = useCallback(({ user, token }: AuthResponse) => {
+  const handleAuth = useCallback(async ({ user, token }: AuthResponse) => {
+    if (cachedUser()?.id !== user.id) await clearLocalData()
     tokenStore.set(token)
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
     setUser(user)
   }, [])
 
@@ -42,8 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleAuth],
   )
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    const unsynced = await db.outbox.count()
+    if (unsynced > 0 && !confirm(`${unsynced} treino(s) ainda não sincronizado(s) serão perdidos. Sair mesmo assim?`)) return
+    await clearLocalData()
     tokenStore.clear()
+    localStorage.removeItem(USER_KEY)
     setUser(null)
   }, [])
 

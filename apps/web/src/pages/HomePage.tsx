@@ -8,10 +8,20 @@ import type { ProfileResponse } from '../lib/types'
 export function HomePage() {
   const { user, logout } = useAuth()
   const [data, setData] = useState<ProfileResponse | null>(null)
+  const [offline, setOffline] = useState(false)
 
   useEffect(() => {
-    api<ProfileResponse>('/profile').then(setData)
+    api<ProfileResponse>('/profile').then(setData).catch(() => setOffline(true))
   }, [])
+
+  if (offline) {
+    return (
+      <main className="mx-auto grid min-h-[70dvh] max-w-md place-content-center gap-3 px-5 text-center">
+        <p className="text-zinc-400">Sem internet. Os treinos continuam funcionando.</p>
+        <Link to="/treinos" className="text-lime-400">Ir para os treinos</Link>
+      </main>
+    )
+  }
 
   if (!data) return <div className="min-h-dvh grid place-items-center text-zinc-500">Carregando…</div>
   if (!data.profile || !data.goal) return <Navigate to="/perfil" replace />
