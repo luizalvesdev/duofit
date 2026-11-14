@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { check, date, index, integer, numeric, pgEnum, pgTable, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, date, index, integer, numeric, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 export const sexEnum = pgEnum('sex', ['male', 'female'])
 export const objectiveEnum = pgEnum('objective', ['lose', 'maintain', 'gain'])
@@ -123,3 +123,69 @@ export const personalRecords = pgTable('personal_records', {
   value: numeric({ precision: 7, scale: 2, mode: 'number' }).notNull(),
   achievedAt: timestamp({ withTimezone: true }).notNull(),
 }, (t) => [index().on(t.userId, t.exerciseId)])
+
+export const foodSourceEnum = pgEnum('food_source', ['taco', 'reference', 'custom'])
+export const mealEnum = pgEnum('meal', ['breakfast', 'lunch', 'snack', 'dinner', 'supper'])
+export type Meal = (typeof mealEnum.enumValues)[number]
+
+const per100 = (precision = 6) => numeric({ precision, scale: 1, mode: 'number' }).notNull()
+
+export const foods = pgTable('foods', {
+  id: uuid().primaryKey().defaultRandom(),
+  source: foodSourceEnum().notNull(),
+  sourceKey: text().unique(),
+  name: text().notNull(),
+  searchName: text().notNull(),
+  category: text(),
+  kcal: per100(),
+  protein: per100(),
+  carbs: per100(),
+  fat: per100(),
+  fiber: per100(),
+  servingName: text(),
+  servingGrams: numeric({ precision: 6, scale: 1, mode: 'number' }),
+  ownerId: uuid().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index().on(t.ownerId)])
+
+export const mealPlanItems = pgTable('meal_plan_items', {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  meal: mealEnum().notNull(),
+  foodId: uuid().notNull().references(() => foods.id, { onDelete: 'cascade' }),
+  grams: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
+  position: smallint().notNull(),
+}, (t) => [index().on(t.userId)])
+
+export const foodLogs = pgTable('food_logs', {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  loggedOn: date().notNull(),
+  meal: mealEnum().notNull(),
+  foodId: uuid().notNull().references(() => foods.id, { onDelete: 'cascade' }),
+  foodName: text().notNull(),
+  grams: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
+  kcal: numeric({ precision: 7, scale: 1, mode: 'number' }).notNull(),
+  protein: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
+  carbs: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
+  fat: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
+  planItemId: uuid().references(() => mealPlanItems.id, { onDelete: 'set null' }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index().on(t.userId, t.loggedOn)])
+
+export const campaigns = pgTable('campaigns', {
+  id: uuid().primaryKey().defaultRandom(),
+  name: text().notNull(),
+  inviteCode: text().notNull().unique(),
+  startsOn: date().notNull(),
+  endsOn: date(),
+  createdBy: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+})
+
+export const campaignMembers = pgTable('campaign_members', {
+  campaignId: uuid().notNull().references(() => campaigns.id, { onDelete: 'cascade' }),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  shareDiet: boolean().notNull().default(false),
+  joinedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [primaryKey({ columns: [t.campaignId, t.userId] }), index().on(t.userId)])

@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import type { AppEnv } from './env'
 import { auth } from './routes/auth'
+import { dietRoutes } from './routes/diet'
 import { exerciseRoutes } from './routes/exercises'
 import { profile } from './routes/profile'
 import { progressRoutes } from './routes/progress'
@@ -17,6 +18,7 @@ const app = new Hono<AppEnv>()
   .route('/templates', templateRoutes)
   .route('/sessions', sessionRoutes)
   .route('/progress', progressRoutes)
+  .route('/diet', dietRoutes)
 
 export type AppType = typeof app
 export default app
