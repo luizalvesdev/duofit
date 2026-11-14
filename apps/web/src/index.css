@@ -1,9 +1,49 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource/barlow-condensed/500.css";
+@import "@fontsource/barlow-condensed/600.css";
+@import "@fontsource/barlow-condensed/700.css";
+
+@theme {
+  --font-sans: "Inter Variable", Inter, system-ui, sans-serif;
+  --font-num: "Barlow Condensed", sans-serif;
+  --color-surface: #18181b;
+  --color-surface-2: #27272a;
+  --color-line: #27272a;
+  --color-line-strong: #3f3f46;
+  --color-muted: #8b8b94;
+  --color-ink: #0b0f02;
+  --color-pr: #c084fc;
+  --color-pr-ink: #1a0b2e;
+  --color-protein: #2dd4bf;
+  --color-carbs: #818cf8;
+  --color-fat: #fbbf24;
+  --animate-pop: pop 0.5s ease-out both;
+
+  @keyframes pop {
+    0% { transform: scale(0.9); opacity: 0; }
+    60% { transform: scale(1.03); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+}
 
 :root {
   color-scheme: dark;
 }
 
 body {
-  @apply bg-zinc-950 text-zinc-100 antialiased;
+  @apply bg-zinc-950 font-sans text-[15px] text-zinc-50 antialiased;
+}
+
+@utility num {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+}
+
+@utility label-caps {
+  @apply text-xs font-bold tracking-[0.08em] text-zinc-400 uppercase;
+}
+
+@utility card {
+  @apply rounded-3xl border border-line bg-surface;
 }

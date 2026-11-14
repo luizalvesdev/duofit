@@ -40,7 +40,7 @@ function Setup({ onDone }: { onDone: () => void }) {
   return (
     <div className="grid gap-6">
       <p className="text-zinc-400">Treinem juntos: numa campanha cada um vê os treinos, PRs, metas e medidas do outro. A dieta só aparece se a pessoa liberar.</p>
-      <section className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="grid gap-3 card p-4">
         <h2 className="font-semibold">Criar campanha</h2>
         <Field label="Nome"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Projeto verão 2027" maxLength={60} /></Field>
         <div className="grid grid-cols-2 gap-3">
@@ -49,7 +49,7 @@ function Setup({ onDone }: { onDone: () => void }) {
         </div>
         <Button onClick={create}>Criar</Button>
       </section>
-      <section className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="grid gap-3 card p-4">
         <h2 className="font-semibold">Entrar com código</h2>
         <div className="flex gap-2">
           <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC234" maxLength={6} />
@@ -81,7 +81,7 @@ function CampaignView({ campaign, onChange }: { campaign: Campaign; onChange: ()
 
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="grid gap-3 card p-4">
         <div>
           <h2 className="text-xl font-bold">{campaign.name}</h2>
           <p className="text-sm text-zinc-500">
@@ -108,7 +108,7 @@ function CampaignView({ campaign, onChange }: { campaign: Campaign; onChange: ()
           <Link
             key={m.userId}
             to={m.userId === user?.id ? '/progresso' : `/dupla/${campaign.id}/${m.userId}`}
-            className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 text-center"
+            className="card p-4 text-center"
           >
             <p className="text-3xl">{m.userId === user?.id ? '🙋' : '💪'}</p>
             <p className="font-semibold">{names.get(m.userId)}</p>
@@ -126,7 +126,7 @@ function CampaignView({ campaign, onChange }: { campaign: Campaign; onChange: ()
       {feed.error && <Offline />}
       {!feed.data && !feed.error && <Loading />}
       {feed.data && feed.data.records.length > 0 && (
-        <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <section className="card p-4">
           <h3 className="mb-1 text-sm font-semibold">🏆 PRs</h3>
           {feed.data.records.slice(0, 8).map((r) => <RecordLine key={r.id} record={r} who={names.get(r.userId)} />)}
         </section>
@@ -152,8 +152,8 @@ export function DuoPage() {
   const campaign = data?.campaigns.at(-1)
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
-      <h1 className="text-2xl font-bold">Dupla</h1>
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
+      <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Dupla</h1>
       {error && <Offline />}
       {!data && !error && <Loading />}
       {data && (campaign ? <CampaignView campaign={campaign} onChange={reload} /> : <Setup onDone={reload} />)}

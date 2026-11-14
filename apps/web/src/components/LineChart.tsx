@@ -86,19 +86,19 @@ export function LineChart({ series, target, unit = '' }: { series: Series[]; tar
         )}
       </svg>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[13px] text-zinc-400">
         <div className="flex flex-wrap gap-3">
           {series.map((s) => (
             <span key={s.label} className="flex items-center gap-1.5">
-              <span className="h-0.5 w-4" style={{ background: s.color }} />
+              <span className="h-[3px] w-4 rounded-sm" style={{ background: s.color }} />
               {s.label}
             </span>
           ))}
           {target && <span className="text-lime-400/80">- - meta {target}{unit}</span>}
         </div>
         {hovered && (
-          <span className="text-zinc-300">
-            {shortDate(hovered.x)}: {hovered.y.toLocaleString('pt-BR')}{unit}
+          <span className="num rounded-lg border border-line-strong bg-surface-2 px-2.5 py-1 text-base text-zinc-50">
+            <span className="text-zinc-400">{shortDate(hovered.x)} ·</span> <b className="text-lime-400">{hovered.y.toLocaleString('pt-BR')}</b>{unit}
           </span>
         )}
       </div>

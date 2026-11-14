@@ -20,9 +20,9 @@ export function MemberRecordsPage() {
   const base = useBase()
   const navigate = useNavigate()
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <button onClick={() => navigate(-1)} className="justify-self-start text-zinc-400">Voltar</button>
-      <h1 className="text-2xl font-bold">Recordes</h1>
+      <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Recordes</h1>
       <RecordsTab basePath={base.api} linkBase={`${base.link}/exercicio`} />
     </main>
   )

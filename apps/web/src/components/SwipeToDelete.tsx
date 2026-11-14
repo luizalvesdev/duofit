@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
+import { Icon } from './Icon'
 
 const REVEAL = 88
 
@@ -8,20 +9,21 @@ export function SwipeToDelete({ children, onDelete }: { children: ReactNode; onD
   const start = useRef<{ x: number; y: number; base: number; locked: boolean | null } | null>(null)
 
   return (
-    <div className="relative overflow-hidden rounded-lg">
+    <div className="relative overflow-hidden">
       <button
         onClick={() => {
           setOffset(0)
           onDelete()
         }}
-        className="absolute inset-y-0 right-0 bg-red-500 font-semibold text-white"
+        className="absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-0.5 bg-red-500 text-sm font-bold text-white"
         style={{ width: REVEAL }}
         tabIndex={offset ? 0 : -1}
       >
+        <Icon name="trash" size={18} />
         Excluir
       </button>
       <div
-        className="relative bg-zinc-900"
+        className="relative bg-surface"
         style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform 150ms', touchAction: 'pan-y' }}
         onPointerDown={(e) => {
           if (e.pointerType === 'mouse' && (e.target as HTMLElement).closest('input, button')) return

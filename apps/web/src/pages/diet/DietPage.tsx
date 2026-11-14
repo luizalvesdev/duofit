@@ -40,7 +40,7 @@ function LogRow({ log, onChange }: { log: FoodLog; onChange: () => void }) {
         <div className="mt-2 flex items-center gap-2">
           <div className="w-24"><NumericInput decimal value={grams} onCommit={setGrams} /></div>
           <span className="text-sm text-zinc-500">g</span>
-          <button onClick={save} className="rounded-lg bg-lime-400 px-3 py-2 text-sm font-semibold text-zinc-950">Salvar</button>
+          <button onClick={save} className="rounded-lg bg-lime-400 px-3 py-2 text-sm font-semibold text-ink">Salvar</button>
           <button onClick={remove} className="ml-auto text-sm text-red-400">Excluir</button>
         </div>
       )}
@@ -76,9 +76,9 @@ export function DietPage() {
   const total = sum(data?.logs ?? [])
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dieta</h1>
+        <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Dieta</h1>
         <Link to="/dieta/plano" className="text-sm text-lime-400">Meu plano</Link>
       </header>
 
@@ -105,7 +105,7 @@ export function DietPage() {
               )
             }
             return (
-              <section key={key} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <section key={key} className="card p-4">
                 <div className="mb-1 flex items-center justify-between">
                   <h2 className="font-semibold">{label}</h2>
                   <span className="text-sm text-zinc-500">{mealKcal > 0 && `${mealKcal} kcal`}</span>

@@ -5,35 +5,46 @@ function Bar({ label, value, target, color }: { label: string; value: number; ta
   const pct = target ? Math.min(100, (value / target) * 100) : 0
   const over = target > 0 && value > target * 1.05
   return (
-    <div className="grid gap-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-zinc-400">{label}</span>
-        <span className={over ? 'text-red-400' : 'text-zinc-300'}>{round(value)}/{target}g</span>
+    <div className="grid gap-2">
+      <div className="flex items-baseline justify-between gap-1 text-[13px]">
+        <span className={`font-semibold ${over ? 'text-red-300' : ''}`}>{label}</span>
+        <span className={`num text-[17px] ${over ? 'text-red-400' : 'text-zinc-400'}`}>
+          <b className={over ? '' : 'text-zinc-50'}>{round(value)}</b>/{target} g
+        </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-        <div className="h-full rounded-full" style={{ width: `${pct}%`, background: over ? '#f87171' : color }} />
+      <div className={`h-2.5 overflow-hidden rounded-full ${over ? 'bg-red-400/20' : 'bg-surface-2'}`}>
+        <div className="h-full rounded-full transition-[width]" style={{ width: `${pct}%`, background: over ? '#f87171' : color }} />
       </div>
     </div>
   )
 }
 
-export function MacroBars({ total, goal }: { total: Macros; goal: Goal | null }) {
+export function MacroBars({ total, goal, title, action }: { total: Macros; goal: Goal | null; title?: string; action?: React.ReactNode }) {
   const kcalTarget = goal?.kcal ?? 0
   const remaining = kcalTarget - round(total.kcal)
   return (
-    <section className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-      <div className="flex items-baseline justify-between">
-        <p className="text-3xl font-black">{round(total.kcal)} <span className="text-base font-normal text-zinc-500">/ {kcalTarget} kcal</span></p>
+    <section className="card grid gap-4 p-5 lg:p-6">
+      {(title || action) && (
+        <div className="flex items-center justify-between">
+          <span className="label-caps">{title}</span>
+          {action}
+        </div>
+      )}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="num text-5xl leading-none font-bold">
+          {round(total.kcal).toLocaleString('pt-BR')}
+          <span className="ml-1.5 text-xl font-semibold text-zinc-400">/ {kcalTarget.toLocaleString('pt-BR')} kcal</span>
+        </span>
         {goal && (
-          <p className={`text-sm ${remaining < 0 ? 'text-red-400' : 'text-lime-400'}`}>
+          <span className={`text-[15px] font-bold ${remaining < 0 ? 'text-red-400' : 'text-lime-400'}`}>
             {remaining >= 0 ? `faltam ${remaining}` : `${-remaining} acima`}
-          </p>
+          </span>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-3">
-        <Bar label="Proteína" value={total.protein} target={goal?.proteinG ?? 0} color="#a3e635" />
-        <Bar label="Carbo" value={total.carbs} target={goal?.carbsG ?? 0} color="#38bdf8" />
-        <Bar label="Gordura" value={total.fat} target={goal?.fatG ?? 0} color="#fbbf24" />
+      <div className="grid grid-cols-3 gap-3 lg:gap-5">
+        <Bar label="Proteína" value={total.protein} target={goal?.proteinG ?? 0} color="var(--color-protein)" />
+        <Bar label="Carbo" value={total.carbs} target={goal?.carbsG ?? 0} color="var(--color-carbs)" />
+        <Bar label="Gordura" value={total.fat} target={goal?.fatG ?? 0} color="var(--color-fat)" />
       </div>
     </section>
   )

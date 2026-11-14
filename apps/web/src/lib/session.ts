@@ -110,6 +110,7 @@ export async function toggleComplete(
   await mutate((s) => {
     Object.assign(s.exercises[exerciseIndex].sets[setIndex], { weightKg, reps, completedAt: new Date().toISOString(), records })
     s.restEndsAt = Date.now() + exercise.restSeconds * 1000
+    s.restTotalMs = exercise.restSeconds * 1000
     if (!s.startedAt) {
       s.startedAt = new Date().toISOString()
       s.runningSince = Date.now()

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
+import { useAuth } from '../auth/AuthContext'
 import { Button, ErrorText, Field, Input, Select } from '../components/ui'
 import { api } from '../lib/api'
 import { activityLabels, ageFrom, kcalFromMacros, objectiveLabels, suggestTargets, todayIso } from '../lib/nutrition'
@@ -34,6 +35,7 @@ const goalChanged = (a: Goal | null, b: Goal) =>
 
 export function ProfilePage() {
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const [form, setForm] = useState<Form>(emptyForm)
   const [current, setCurrent] = useState<ProfileResponse | null>(null)
   const [custom, setCustom] = useState<Macros | null>(null)
@@ -123,7 +125,7 @@ export function ProfilePage() {
 
   return (
     <main className="mx-auto max-w-md px-5 py-8">
-      <h1 className="text-2xl font-bold">Seu perfil</h1>
+      <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Seu perfil</h1>
       <p className="mb-6 text-zinc-500">Usado para calcular suas calorias e macros.</p>
 
       <form onSubmit={handleSubmit} className="grid gap-4">
@@ -183,7 +185,7 @@ export function ProfilePage() {
         </div>
 
         {suggestion && macros && (
-          <section className="mt-2 grid gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+          <section className="mt-2 grid gap-4 card p-4">
             <div className="flex items-baseline justify-between">
               <div>
                 <p className="text-sm text-zinc-500">Meta diária</p>
@@ -217,6 +219,9 @@ export function ProfilePage() {
           {saving ? 'Salvando…' : 'Salvar'}
         </Button>
       </form>
+      {current?.profile && (
+        <button onClick={logout} className="mt-2 py-3 text-sm font-semibold text-red-400">Sair da conta</button>
+      )}
     </main>
   )
 }

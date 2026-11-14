@@ -27,6 +27,7 @@ export type ActiveSession = {
   elapsedMs: number
   runningSince: number | null
   restEndsAt: number | null
+  restTotalMs?: number
   exercises: ActiveExercise[]
 }
 

@@ -39,13 +39,13 @@ export function MemberPage() {
   const lastWeight = data?.body.filter((b) => b.weightKg !== null).at(-1)?.weightKg
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <button onClick={() => navigate('/dupla')} className="justify-self-start text-zinc-400">Voltar</button>
       {error && <Offline />}
       {!data && !error && <Loading />}
       {data && (
         <>
-          <h1 className="text-2xl font-bold">{data.user.name}</h1>
+          <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">{data.user.name}</h1>
 
           {data.goal && (
             <section className="grid grid-cols-3 gap-2 text-center">
@@ -56,7 +56,7 @@ export function MemberPage() {
           )}
 
           {data.body.length > 0 && (
-            <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+            <section className="card p-4">
               <BodyChart logs={data.body} target={data.goal?.targetWeightKg ?? null} />
             </section>
           )}

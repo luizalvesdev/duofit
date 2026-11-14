@@ -32,7 +32,7 @@ export function SessionCard({ session, to }: { session: SessionSummary; to?: str
       </p>
     </>
   )
-  const className = 'grid gap-1 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4'
+  const className = 'grid gap-1 card p-4'
   return to ? <Link to={to} className={className}>{content}</Link> : <div className={className}>{content}</div>
 }
 

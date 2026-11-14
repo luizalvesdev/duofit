@@ -18,20 +18,20 @@ export function SessionDetailPage({ basePath = '/progress' }: { basePath?: strin
   for (const set of data?.sets ?? []) groups.set(set.exercisePosition, [...(groups.get(set.exercisePosition) ?? []), set])
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <button onClick={() => navigate(-1)} className="justify-self-start text-zinc-400">Voltar</button>
       {error && <Offline />}
       {!data && !error && <Loading />}
       {data && (
         <>
           <header>
-            <h1 className="text-2xl font-bold">{data.session.name}</h1>
+            <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">{data.session.name}</h1>
             <p className="text-zinc-500">{formatDay(data.session.startedAt)} · {formatDuration(data.session.durationSeconds)}</p>
           </header>
           {[...groups.values()].map((sets) => {
             let n = 0
             return (
-              <section key={sets[0].exercisePosition} className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <section key={sets[0].exercisePosition} className="grid gap-2 card p-4">
                 <h2 className="font-semibold">{sets[0].exerciseName}</h2>
                 {sets.map((set) => {
                   if (set.setType !== 'warmup') n++

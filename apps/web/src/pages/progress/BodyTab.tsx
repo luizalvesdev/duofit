@@ -85,7 +85,7 @@ export function BodyTab() {
 
   return (
     <div className="grid gap-4">
-      <section className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="grid gap-3 card p-4">
         <div className="flex items-end gap-3">
           <label className="grid flex-1 gap-1">
             <span className="text-sm text-zinc-400">Peso de hoje (kg)</span>
@@ -135,7 +135,7 @@ export function BodyTab() {
         </section>
       )}
 
-      <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className="card p-4">
         <BodyChart logs={logs} target={target} />
       </section>
 

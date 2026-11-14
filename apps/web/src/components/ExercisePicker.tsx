@@ -60,12 +60,12 @@ function CreateExercise({ initialName, onCreated, onCancel }: {
 
 const normalize = (value: string) => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
 
-export function ExerciseThumb({ exercise, size = 'h-12 w-12' }: { exercise: Exercise; size?: string }) {
+export function ExerciseThumb({ exercise, size = 'h-12 w-12 rounded-lg' }: { exercise: Exercise; size?: string }) {
   const src = exerciseImage(exercise)
   return src ? (
-    <img src={src} alt="" loading="lazy" className={`${size} shrink-0 rounded-lg bg-white object-cover`} />
+    <img src={src} alt="" loading="lazy" className={`${size} shrink-0 bg-white object-cover`} />
   ) : (
-    <div className={`${size} shrink-0 rounded-lg bg-zinc-800 grid place-items-center text-xs text-zinc-500`}>
+    <div className={`${size} grid shrink-0 place-items-center bg-surface-2 text-xs text-zinc-500`}>
       {muscleLabels[exercise.primaryMuscle].slice(0, 3)}
     </div>
   )

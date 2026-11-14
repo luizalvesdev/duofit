@@ -94,7 +94,7 @@ export function TemplateEditorPage() {
   }
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
         <button onClick={() => navigate('/treinos')} className="text-zinc-400">Voltar</button>
         <h1 className="text-lg font-bold">{id ? 'Editar ficha' : 'Nova ficha'}</h1>
@@ -126,9 +126,9 @@ export function TemplateEditorPage() {
         {items.map((item, index) => {
           const exercise = byId.get(item.exerciseId)
           return (
-            <li key={`${item.exerciseId}-${index}`} className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-3">
+            <li key={`${item.exerciseId}-${index}`} className="grid gap-3 card p-3">
               <div className="flex items-center gap-3">
-                {exercise && <ExerciseThumb exercise={exercise} size="h-10 w-10" />}
+                {exercise && <ExerciseThumb exercise={exercise} size="h-10 w-10 rounded-lg" />}
                 <p className="flex-1 font-medium">{exercise?.name ?? '…'}</p>
                 <div className="flex gap-1 text-zinc-500">
                   <button onClick={() => move(index, -1)} aria-label="Subir" className="px-2">↑</button>

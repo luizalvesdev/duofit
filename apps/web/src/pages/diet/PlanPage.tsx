@@ -43,7 +43,7 @@ export function PlanPage() {
   }
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
         <button onClick={() => navigate('/dieta')} className="text-zinc-400">Voltar</button>
         <h1 className="text-lg font-bold">Meu plano</h1>
@@ -54,7 +54,7 @@ export function PlanPage() {
       <MacroBars total={total} goal={profile.data?.goal ?? null} />
 
       {meals.map(({ key, label }) => (
-        <section key={key} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <section key={key} className="card p-4">
           <div className="mb-1 flex items-center justify-between">
             <h2 className="font-semibold">{label}</h2>
             <span className="text-sm text-zinc-500">

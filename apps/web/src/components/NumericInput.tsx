@@ -38,7 +38,7 @@ export function NumericInput({ value, onCommit, decimal = false, placeholder, in
         onCommit(parse(next))
       }}
       onBlur={() => setFocused(false)}
-      className={`w-full rounded-lg bg-zinc-800 py-2 text-center font-semibold outline-none placeholder:font-normal placeholder:text-zinc-500 focus:ring-1 focus:ring-lime-400 ${invalid ? 'ring-1 ring-red-500' : ''} ${className}`}
+      className={`w-full min-w-0 text-center font-semibold text-zinc-50 outline-none placeholder:font-normal placeholder:text-zinc-500 focus:border-lime-400! focus:ring-4 focus:ring-lime-400/15 ${invalid ? 'border-2! border-red-400!' : ''} ${className || 'h-12 rounded-xl border border-line-strong bg-surface-2'}`}
     />
   )
 }

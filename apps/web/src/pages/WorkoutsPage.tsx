@@ -24,9 +24,9 @@ export function WorkoutsPage() {
   )
 
   return (
-    <main className="mx-auto grid max-w-md gap-4 px-5 py-8">
+    <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Treinos</h1>
+        <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Treinos</h1>
         <Link to="/treinos/nova" className="text-sm text-lime-400">+ Nova ficha</Link>
       </header>
 
@@ -37,14 +37,14 @@ export function WorkoutsPage() {
       )}
 
       {active && (
-        <Link to="/treino" className="rounded-2xl bg-lime-400 p-4 text-zinc-950">
+        <Link to="/treino" className="rounded-2xl bg-lime-400 p-4 text-ink">
           <p className="text-sm font-medium opacity-70">Em andamento</p>
           <p className="text-lg font-bold">{active.name} — continuar</p>
         </Link>
       )}
 
       {sorted.map((template) => (
-        <section key={template.id} className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <section key={template.id} className="grid gap-3 card p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold">{template.name}</h2>
