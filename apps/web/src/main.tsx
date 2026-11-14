@@ -8,6 +8,9 @@ import './index.css'
 import { AuthPage } from './pages/AuthPage'
 import { DietPage } from './pages/diet/DietPage'
 import { PlanPage } from './pages/diet/PlanPage'
+import { DuoPage } from './pages/duo/DuoPage'
+import { MemberExercisePage, MemberRecordsPage, MemberSessionPage } from './pages/duo/MemberRoutes'
+import { MemberPage } from './pages/duo/MemberPage'
 import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { BodyTab } from './pages/progress/BodyTab'
@@ -34,6 +37,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/" element={<HomePage />} />
               <Route path="/treinos" element={<WorkoutsPage />} />
               <Route path="/dieta" element={<DietPage />} />
+              <Route path="/dupla" element={<DuoPage />} />
               <Route path="/progresso" element={<ProgressPage />}>
                 <Route index element={<HistoryTab />} />
                 <Route path="recordes" element={<RecordsTab />} />
@@ -41,6 +45,10 @@ createRoot(document.getElementById('root')!).render(
               </Route>
             </Route>
             <Route path="/dieta/plano" element={<PlanPage />} />
+            <Route path="/dupla/:campaignId/:userId" element={<MemberPage />} />
+            <Route path="/dupla/:campaignId/:userId/recordes" element={<MemberRecordsPage />} />
+            <Route path="/dupla/:campaignId/:userId/treino/:id" element={<MemberSessionPage />} />
+            <Route path="/dupla/:campaignId/:userId/exercicio/:id" element={<MemberExercisePage />} />
             <Route path="/progresso/treino/:id" element={<SessionDetailPage />} />
             <Route path="/progresso/exercicio/:id" element={<ExerciseProgressPage />} />
             <Route path="/perfil" element={<ProfilePage />} />

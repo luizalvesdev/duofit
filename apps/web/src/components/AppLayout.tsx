@@ -7,6 +7,7 @@ const tabs = [
   { to: '/treinos', label: 'Treinos' },
   { to: '/dieta', label: 'Dieta' },
   { to: '/progresso', label: 'Progresso' },
+  { to: '/dupla', label: 'Dupla' },
 ]
 
 export function AppLayout() {

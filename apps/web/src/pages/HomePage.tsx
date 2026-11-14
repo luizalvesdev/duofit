@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
+import { MacroBars } from '../components/MacroBars'
 import { api } from '../lib/api'
-import { objectiveLabels } from '../lib/nutrition'
+import { sum, type DayResponse } from '../lib/diet'
+import { useApi } from '../lib/useApi'
+import { objectiveLabels, todayIso } from '../lib/nutrition'
 import type { ProfileResponse } from '../lib/types'
 
 export function HomePage() {
   const { user, logout } = useAuth()
   const [data, setData] = useState<ProfileResponse | null>(null)
   const [offline, setOffline] = useState(false)
+  const diet = useApi<DayResponse>(`/diet/day/${todayIso()}`)
 
   useEffect(() => {
     api<ProfileResponse>('/profile').then(setData).catch(() => setOffline(true))
@@ -58,6 +62,13 @@ export function HomePage() {
             </div>
           )}
         </section>
+      )}
+
+      {diet.data && (
+        <Link to="/dieta" className="grid gap-2">
+          <p className="text-sm text-zinc-500">Dieta de hoje</p>
+          <MacroBars total={sum(diet.data.logs)} goal={goal} />
+        </Link>
       )}
 
       <Link to="/perfil" className="text-center text-sm text-lime-400">Editar perfil e meta</Link>
