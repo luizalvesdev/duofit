@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DuoFit</string>
+    <string name="title_activity_main">DuoFit</string>
+    <string name="package_name">app.duofit</string>
+    <string name="custom_url_scheme">app.duofit</string>
+</resources>

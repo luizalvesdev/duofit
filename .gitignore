@@ -4,3 +4,5 @@ dist/
 .dev.vars
 .env*
 !.env.example
+!apps/web/.env.android
+!apps/web/.env.production
