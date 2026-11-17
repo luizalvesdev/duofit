@@ -1,3 +1,5 @@
 DATABASE_URL="postgresql://user:password@host/db?sslmode=require"
 JWT_SECRET="troque-por-um-segredo-longo"
-INVITE_CODE="codigo-de-convite"
+SMTP_USER="seu-email@gmail.com"
+SMTP_PASS="senha-de-app-de-16-letras"
+APP_URL="http://localhost:5173"

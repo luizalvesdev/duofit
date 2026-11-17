@@ -3,7 +3,10 @@
   "name": "duofit-api",
   "main": "src/index.ts",
   "compatibility_date": "2026-11-14",
-  "compatibility_flags": ["nodejs_compat"]
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "APP_URL": "https://duofit.lpbalves7filho.workers.dev"
+  }
   // "compatibility_flags": [
   //   "nodejs_compat"
   // ],

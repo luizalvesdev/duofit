@@ -8,7 +8,7 @@ import { campaignMembers, campaigns, users } from '../db/schema'
 import type { AppEnv } from '../env'
 import { currentGoal, exerciseBests, exerciseProgress, listBodyLogs, listSessions, recentRecords, sessionDetail } from '../lib/stats'
 import { requireAuth } from '../middleware/auth'
-import { loadDiary } from './diet'
+import { loadDiary, mealsForDay } from './diet'
 
 type Db = ReturnType<typeof createDb>
 type MemberEnv = AppEnv & { Variables: AppEnv['Variables'] & { targetId: string; targetSharesDiet: boolean } }
@@ -85,8 +85,12 @@ const member = new Hono<MemberEnv>()
     if (!date.success) return c.json({ error: 'invalid_date' }, 400)
     const db = createDb(c.env.DATABASE_URL)
     const targetId = c.get('targetId')
-    const [logs, goal] = await Promise.all([loadDiary(db, targetId, date.data), currentGoal(db, targetId)])
-    return c.json({ logs, goal })
+    const [logs, goal, dayMeals] = await Promise.all([
+      loadDiary(db, targetId, date.data),
+      currentGoal(db, targetId),
+      mealsForDay(db, targetId, date.data),
+    ])
+    return c.json({ logs, goal, meals: dayMeals })
   })
 
 export const campaignRoutes = new Hono<AppEnv>()

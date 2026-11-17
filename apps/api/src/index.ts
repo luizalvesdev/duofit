@@ -11,7 +11,19 @@ import { sessionRoutes } from './routes/sessions'
 import { templateRoutes } from './routes/templates'
 
 const app = new Hono<AppEnv>()
-  .use('*', cors({ origin: ['http://localhost:5173'], allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] }))
+  .use(
+    '*',
+    cors({
+      // Vite dev server, hosted PWA, Capacitor WebView (Android: https://localhost, iOS: capacitor://localhost)
+      origin: [
+        'http://localhost:5173',
+        'https://duofit.lpbalves7filho.workers.dev',
+        'https://localhost',
+        'capacitor://localhost',
+      ],
+      allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    }),
+  )
   .get('/health', (c) => c.json({ ok: true }))
   .route('/auth', auth)
   .route('/profile', profile)

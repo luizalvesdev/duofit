@@ -1,9 +1,9 @@
 import { zValidator } from '@hono/zod-validator'
-import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql } from 'drizzle-orm'
+import { and, asc, count, desc, eq, gte, inArray, isNull, like, max, or, sql } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { createDb } from '../db/client'
-import { foodLogs, foods, mealEnum, mealPlanItems } from '../db/schema'
+import { DEFAULT_MEALS, foodLogs, foods, mealPlanItems, meals } from '../db/schema'
 import type { AppEnv } from '../env'
 import { searchable } from '../lib/search'
 import { currentGoal } from '../lib/stats'
@@ -44,15 +44,25 @@ const customFoodSchema = z.object({
 
 const logSchema = z.object({
   loggedOn: isoDate,
-  meal: z.enum(mealEnum.enumValues),
+  mealId: z.uuid(),
   foodId: z.uuid(),
   grams,
   planItemId: z.uuid().nullable().default(null),
 })
 
 const planSchema = z.object({
-  items: z.array(z.object({ meal: z.enum(mealEnum.enumValues), foodId: z.uuid(), grams })).max(80),
+  items: z.array(z.object({ mealId: z.uuid(), foodId: z.uuid(), grams })).max(80),
 })
+
+const MAX_MEALS = 12
+const mealName = z.object({ name: z.string().trim().min(1).max(40) })
+
+const mealColumns = {
+  id: meals.id,
+  name: meals.name,
+  position: meals.position,
+  archived: sql<boolean>`${meals.archivedAt} is not null`,
+}
 
 const scale = (per100: number, g: number) => Math.round(((per100 * g) / 100) * 10) / 10
 
@@ -63,9 +73,44 @@ async function visibleFoods(db: Db, userId: string, ids: string[]) {
   return new Map(rows.map((f) => [f.id, f]))
 }
 
+export async function createDefaultMeals(db: Db, userId: string) {
+  await db.insert(meals).values(DEFAULT_MEALS.map((name, position) => ({ userId, name, position })))
+}
+
+export async function activeMeals(db: Db, userId: string) {
+  return db
+    .select(mealColumns)
+    .from(meals)
+    .where(and(eq(meals.userId, userId), isNull(meals.archivedAt)))
+    .orderBy(asc(meals.position))
+}
+
+/** Active meals plus archived ones that still hold entries on `date`, so old diary days keep their sections. */
+export async function mealsForDay(db: Db, userId: string, date: string) {
+  const loggedThatDay = db
+    .select({ id: foodLogs.mealId })
+    .from(foodLogs)
+    .where(and(eq(foodLogs.userId, userId), eq(foodLogs.loggedOn, date)))
+  return db
+    .select(mealColumns)
+    .from(meals)
+    .where(and(eq(meals.userId, userId), or(isNull(meals.archivedAt), inArray(meals.id, loggedThatDay))))
+    .orderBy(asc(meals.position))
+}
+
+async function ownsActiveMeals(db: Db, userId: string, ids: string[]) {
+  const unique = [...new Set(ids)]
+  if (unique.length === 0) return true
+  const rows = await db
+    .select({ id: meals.id })
+    .from(meals)
+    .where(and(eq(meals.userId, userId), isNull(meals.archivedAt), inArray(meals.id, unique)))
+  return rows.length === unique.length
+}
+
 export async function loadPlan(db: Db, userId: string) {
   return db
-    .select({ id: mealPlanItems.id, meal: mealPlanItems.meal, grams: mealPlanItems.grams, position: mealPlanItems.position, food: foodColumns })
+    .select({ id: mealPlanItems.id, mealId: mealPlanItems.mealId, grams: mealPlanItems.grams, position: mealPlanItems.position, food: foodColumns })
     .from(mealPlanItems)
     .innerJoin(foods, eq(foods.id, mealPlanItems.foodId))
     .where(eq(mealPlanItems.userId, userId))
@@ -122,8 +167,13 @@ export const dietRoutes = new Hono<AppEnv>()
     if (!date.success) return c.json({ error: 'invalid_date' }, 400)
     const db = createDb(c.env.DATABASE_URL)
     const userId = c.get('userId')
-    const [logs, plan, goal] = await Promise.all([loadDiary(db, userId, date.data), loadPlan(db, userId), currentGoal(db, userId)])
-    return c.json({ logs, plan, goal })
+    const [logs, plan, goal, dayMeals] = await Promise.all([
+      loadDiary(db, userId, date.data),
+      loadPlan(db, userId),
+      currentGoal(db, userId),
+      mealsForDay(db, userId, date.data),
+    ])
+    return c.json({ logs, plan, goal, meals: dayMeals })
   })
   .post('/logs', zValidator('json', logSchema), async (c) => {
     const body = c.req.valid('json')
@@ -131,6 +181,7 @@ export const dietRoutes = new Hono<AppEnv>()
     const userId = c.get('userId')
     const food = (await visibleFoods(db, userId, [body.foodId])).get(body.foodId)
     if (!food) return c.json({ error: 'unknown_food' }, 400)
+    if (!(await ownsActiveMeals(db, userId, [body.mealId]))) return c.json({ error: 'unknown_meal' }, 400)
 
     const [log] = await db
       .insert(foodLogs)
@@ -175,7 +226,9 @@ export const dietRoutes = new Hono<AppEnv>()
   })
   .get('/plan', async (c) => {
     const db = createDb(c.env.DATABASE_URL)
-    return c.json({ plan: await loadPlan(db, c.get('userId')) })
+    const userId = c.get('userId')
+    const [plan, mealList] = await Promise.all([loadPlan(db, userId), activeMeals(db, userId)])
+    return c.json({ plan, meals: mealList })
   })
   .put('/plan', zValidator('json', planSchema), async (c) => {
     const { items } = c.req.valid('json')
@@ -183,8 +236,70 @@ export const dietRoutes = new Hono<AppEnv>()
     const userId = c.get('userId')
     const visible = await visibleFoods(db, userId, items.map((i) => i.foodId))
     if (items.some((i) => !visible.has(i.foodId))) return c.json({ error: 'unknown_food' }, 400)
+    if (!(await ownsActiveMeals(db, userId, items.map((i) => i.mealId)))) return c.json({ error: 'unknown_meal' }, 400)
 
     await db.delete(mealPlanItems).where(eq(mealPlanItems.userId, userId))
     if (items.length) await db.insert(mealPlanItems).values(items.map((item, position) => ({ ...item, userId, position })))
     return c.json({ plan: await loadPlan(db, userId) })
+  })
+  .get('/meals', async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    return c.json({ meals: await activeMeals(db, c.get('userId')) })
+  })
+  .post('/meals', zValidator('json', mealName), async (c) => {
+    const { name } = c.req.valid('json')
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const [{ active, last }] = await db
+      .select({ active: count(), last: max(meals.position) })
+      .from(meals)
+      .where(and(eq(meals.userId, userId), isNull(meals.archivedAt)))
+    if (active >= MAX_MEALS) return c.json({ error: 'too_many_meals' }, 400)
+    const [meal] = await db
+      .insert(meals)
+      .values({ userId, name, position: (last ?? -1) + 1 })
+      .returning(mealColumns)
+    return c.json({ meal }, 201)
+  })
+  .patch('/meals/:id', zValidator('json', mealName), async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const [meal] = await db
+      .update(meals)
+      .set({ name: c.req.valid('json').name })
+      .where(and(eq(meals.id, c.req.param('id')), eq(meals.userId, c.get('userId')), isNull(meals.archivedAt)))
+      .returning(mealColumns)
+    return meal ? c.json({ meal }) : c.json({ error: 'not_found' }, 404)
+  })
+  .put('/meals/order', zValidator('json', z.object({ ids: z.array(z.uuid()).min(1).max(MAX_MEALS) })), async (c) => {
+    const { ids } = c.req.valid('json')
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const current = await activeMeals(db, userId)
+    const same = current.length === ids.length && new Set(ids).size === ids.length && current.every((m) => ids.includes(m.id))
+    if (!same) return c.json({ error: 'invalid_order' }, 400)
+
+    const [first, ...rest] = ids.map((id, position) =>
+      db.update(meals).set({ position }).where(and(eq(meals.id, id), eq(meals.userId, userId))),
+    )
+    await db.batch([first, ...rest])
+    return c.json({ meals: await activeMeals(db, userId) })
+  })
+  .delete('/meals/:id', async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const id = c.req.param('id')
+    const [meal] = await db.select({ id: meals.id }).from(meals).where(and(eq(meals.id, id), eq(meals.userId, userId), isNull(meals.archivedAt)))
+    if (!meal) return c.json({ error: 'not_found' }, 404)
+
+    const [{ logs }] = await db.select({ logs: count() }).from(foodLogs).where(eq(foodLogs.mealId, id))
+    if (logs === 0) {
+      await db.delete(meals).where(eq(meals.id, id))
+    } else {
+      // Keep the meal (archived) so past diary days still show it; drop it from the plan.
+      await db.batch([
+        db.update(meals).set({ archivedAt: new Date() }).where(eq(meals.id, id)),
+        db.delete(mealPlanItems).where(eq(mealPlanItems.mealId, id)),
+      ])
+    }
+    return c.json({ ok: true })
   })

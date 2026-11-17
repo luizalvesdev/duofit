@@ -125,8 +125,6 @@ export const personalRecords = pgTable('personal_records', {
 }, (t) => [index().on(t.userId, t.exerciseId)])
 
 export const foodSourceEnum = pgEnum('food_source', ['taco', 'reference', 'custom'])
-export const mealEnum = pgEnum('meal', ['breakfast', 'lunch', 'snack', 'dinner', 'supper'])
-export type Meal = (typeof mealEnum.enumValues)[number]
 
 const per100 = (precision = 6) => numeric({ precision, scale: 1, mode: 'number' }).notNull()
 
@@ -148,10 +146,22 @@ export const foods = pgTable('foods', {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index().on(t.ownerId)])
 
+export const DEFAULT_MEALS = ['Café da manhã', 'Almoço', 'Lanche', 'Jantar', 'Ceia']
+
+// User-defined meal slots. Removing a meal archives it so past diary entries keep their meal name.
+export const meals = pgTable('meals', {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text().notNull(),
+  position: smallint().notNull(),
+  archivedAt: timestamp({ withTimezone: true }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index().on(t.userId)])
+
 export const mealPlanItems = pgTable('meal_plan_items', {
   id: uuid().primaryKey().defaultRandom(),
   userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
-  meal: mealEnum().notNull(),
+  mealId: uuid().notNull().references(() => meals.id, { onDelete: 'cascade' }),
   foodId: uuid().notNull().references(() => foods.id, { onDelete: 'cascade' }),
   grams: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
   position: smallint().notNull(),
@@ -161,7 +171,7 @@ export const foodLogs = pgTable('food_logs', {
   id: uuid().primaryKey().defaultRandom(),
   userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
   loggedOn: date().notNull(),
-  meal: mealEnum().notNull(),
+  mealId: uuid().notNull().references(() => meals.id, { onDelete: 'cascade' }),
   foodId: uuid().notNull().references(() => foods.id, { onDelete: 'cascade' }),
   foodName: text().notNull(),
   grams: numeric({ precision: 6, scale: 1, mode: 'number' }).notNull(),
@@ -189,3 +199,13 @@ export const campaignMembers = pgTable('campaign_members', {
   shareDiet: boolean().notNull().default(false),
   joinedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.campaignId, t.userId] }), index().on(t.userId)])
+
+// One-time password reset links. Only a SHA-256 of the token is stored.
+export const passwordResets = pgTable('password_resets', {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text().notNull().unique(),
+  expiresAt: timestamp({ withTimezone: true }).notNull(),
+  usedAt: timestamp({ withTimezone: true }),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index().on(t.userId)])
