@@ -9,6 +9,10 @@ const errorMessages: Record<string, string> = {
   email_taken: 'Esse e-mail já tem conta.',
 }
 
+// Public demo account, filled by apps/api/seed/seed-demo.ts.
+const DEMO_EMAIL = 'demo@duofit.demo'
+const DEMO_PASSWORD = 'duofit-demo'
+
 export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   const { login, register } = useAuth()
   const [error, setError] = useState('')
@@ -18,14 +22,16 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const form = Object.fromEntries(new FormData(event.currentTarget)) as Record<string, string>
+    await attempt(() =>
+      isRegister ? register({ email: form.email, password: form.password, name: form.name }) : login(form.email, form.password),
+    )
+  }
+
+  async function attempt(action: () => Promise<void>) {
     setError('')
     setSubmitting(true)
     try {
-      if (isRegister) {
-        await register({ email: form.email, password: form.password, name: form.name })
-      } else {
-        await login(form.email, form.password)
-      }
+      await action()
     } catch (err) {
       setError(err instanceof ApiError ? (errorMessages[err.code] ?? 'Confira os dados.') : 'Sem conexão com o servidor.')
     } finally {
@@ -70,6 +76,16 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
         <Button type="submit" disabled={submitting}>
           {submitting ? 'Aguarde…' : isRegister ? 'Criar conta' : 'Entrar'}
         </Button>
+        {!isRegister && (
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => attempt(() => login(DEMO_EMAIL, DEMO_PASSWORD))}
+            className="h-12 rounded-[14px] border border-line-strong px-5 font-bold text-zinc-200 transition hover:border-lime-400 active:scale-[0.98] disabled:opacity-50"
+          >
+            Ver demonstração
+          </button>
+        )}
 
         <p className="text-center text-sm text-zinc-500">
           {isRegister ? 'Já tem conta? ' : 'Primeira vez? '}

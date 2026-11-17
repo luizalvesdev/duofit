@@ -10,7 +10,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx seed/seed.ts",
-    "db:seed-foods": "tsx seed/seed-foods.ts"
+    "db:seed-foods": "tsx seed/seed-foods.ts",
+    "db:seed-demo": "tsx seed/seed-demo.ts"
   },
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",

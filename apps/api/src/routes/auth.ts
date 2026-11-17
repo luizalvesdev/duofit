@@ -65,7 +65,8 @@ export const auth = new Hono<AppEnv>()
     const db = createDb(c.env.DATABASE_URL)
     const [user] = await db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(eq(users.email, c.req.valid('json').email))
 
-    if (user) {
+    // Demo accounts (seed/seed-demo.ts) use an undeliverable domain: never e-mail them.
+    if (user && !user.email.endsWith('@duofit.demo')) {
       const [recent] = await db
         .select({ id: passwordResets.id })
         .from(passwordResets)
