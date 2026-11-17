@@ -3,6 +3,9 @@
   // Static hosting for the PWA (Workers static assets). Build first: `npm run deploy`.
   "name": "duofit",
   "compatibility_date": "2026-11-13",
+  "routes": [{ "pattern": "duofit.luizalves.dev", "custom_domain": true }],
+  // Keep the old *.workers.dev URL alive for installed PWAs and APKs.
+  "workers_dev": true,
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"

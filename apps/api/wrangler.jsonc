@@ -4,8 +4,11 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-11-14",
   "compatibility_flags": ["nodejs_compat"],
+  "routes": [{ "pattern": "duofit-api.luizalves.dev", "custom_domain": true }],
+  // Keep the old *.workers.dev URL alive for installed PWAs and APKs.
+  "workers_dev": true,
   "vars": {
-    "APP_URL": "https://duofit.lpbalves7filho.workers.dev"
+    "APP_URL": "https://duofit.luizalves.dev"
   }
   // "compatibility_flags": [
   //   "nodejs_compat"

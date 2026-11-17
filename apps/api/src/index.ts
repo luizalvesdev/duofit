@@ -17,6 +17,7 @@ const app = new Hono<AppEnv>()
       // Vite dev server, hosted PWA, Capacitor WebView (Android: https://localhost, iOS: capacitor://localhost)
       origin: [
         'http://localhost:5173',
+        'https://duofit.luizalves.dev',
         'https://duofit.lpbalves7filho.workers.dev',
         'https://localhost',
         'capacitor://localhost',

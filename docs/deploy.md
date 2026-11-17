@@ -2,8 +2,8 @@
 
 | Target  | URL / output                                         | Command (from repo root)      |
 | ------- | ---------------------------------------------------- | ----------------------------- |
-| API     | https://duofit-api.lpbalves7filho.workers.dev        | `npm run deploy -w api`       |
-| Web/PWA | https://duofit.lpbalves7filho.workers.dev            | `npm run deploy -w web`       |
+| API     | https://duofit-api.luizalves.dev                     | `npm run deploy -w api`       |
+| Web/PWA | https://duofit.luizalves.dev                         | `npm run deploy -w web`       |
 | Android | `apps/web/android/app/build/outputs/apk/debug/app-debug.apk` | `npm run apk -w web`  |
 
 The API and the dev environment share the same Neon database (`DATABASE_URL` in `apps/api/.dev.vars` is also the Worker secret).

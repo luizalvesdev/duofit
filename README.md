@@ -4,7 +4,7 @@ App de treino e dieta feito para treinar **em dupla**. Cada um registra os próp
 
 Roda como PWA (iPhone e navegador) e como app Android, com o mesmo código.
 
-**Demo:** https://duofit.lpbalves7filho.workers.dev — toque em "Ver demonstração" na tela de login para entrar numa conta já preenchida com treinos, recordes, dieta e uma dupla.
+**Demo:** https://duofit.luizalves.dev — toque em "Ver demonstração" na tela de login para entrar numa conta já preenchida com treinos, recordes, dieta e uma dupla.
 
 ## O que tem
 
