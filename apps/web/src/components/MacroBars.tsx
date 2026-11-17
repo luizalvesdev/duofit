@@ -41,7 +41,7 @@ export function MacroBars({ total, goal, title, action }: { total: Macros; goal:
           </span>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-3 lg:gap-5">
+      <div className="grid gap-3.5 lg:grid-cols-3 lg:gap-5">
         <Bar label="Proteína" value={total.protein} target={goal?.proteinG ?? 0} color="var(--color-protein)" />
         <Bar label="Carbo" value={total.carbs} target={goal?.carbsG ?? 0} color="var(--color-carbs)" />
         <Bar label="Gordura" value={total.fat} target={goal?.fatG ?? 0} color="var(--color-fat)" />

@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { FoodSearch } from '../../components/FoodSearch'
 import { MacroBars } from '../../components/MacroBars'
 import { NumericInput } from '../../components/NumericInput'
 import { Button, ErrorText } from '../../components/ui'
 import { api } from '../../lib/api'
-import { forGrams, meals, round, sum, type Food, type Meal, type PlanItem } from '../../lib/diet'
+import { forGrams, round, sum, type Food, type Meal, type PlanItem } from '../../lib/diet'
 import type { ProfileResponse } from '../../lib/types'
 import { Loading, useApi } from '../../lib/useApi'
 
-type Draft = { key: string; meal: Meal; food: Food; grams: number | null }
+type Draft = { key: string; mealId: string; food: Food; grams: number | null }
 
 export function PlanPage() {
   const navigate = useNavigate()
-  const plan = useApi<{ plan: PlanItem[] }>('/diet/plan')
+  const plan = useApi<{ plan: PlanItem[]; meals: Meal[] }>('/diet/plan')
   const profile = useApi<ProfileResponse>('/profile')
   const [items, setItems] = useState<Draft[] | null>(null)
   const [adding, setAdding] = useState<Meal | null>(null)
@@ -22,11 +22,11 @@ export function PlanPage() {
 
   useEffect(() => {
     if (plan.data && items === null) {
-      setItems(plan.data.plan.map((p) => ({ key: p.id, meal: p.meal, food: p.food, grams: p.grams })))
+      setItems(plan.data.plan.map((p) => ({ key: p.id, mealId: p.mealId, food: p.food, grams: p.grams })))
     }
   }, [plan.data, items])
 
-  if (!items) return <main className="mx-auto max-w-md px-5 py-8">{plan.error ? 'Sem conexão.' : <Loading />}</main>
+  if (!items || !plan.data) return <main className="mx-auto max-w-md px-5 py-8">{plan.error ? 'Sem conexão.' : <Loading />}</main>
 
   const total = sum(items.filter((i) => i.grams).map((i) => forGrams(i.food, i.grams!)))
 
@@ -34,7 +34,7 @@ export function PlanPage() {
     if (items!.some((i) => !i.grams)) return setError('Preencha a quantidade de todos os itens.')
     setSaving(true)
     try {
-      await api('/diet/plan', { method: 'PUT', body: { items: items!.map((i) => ({ meal: i.meal, foodId: i.food.id, grams: i.grams })) } })
+      await api('/diet/plan', { method: 'PUT', body: { items: items!.map((i) => ({ mealId: i.mealId, foodId: i.food.id, grams: i.grams })) } })
       navigate('/dieta')
     } catch {
       setError('Não foi possível salvar.')
@@ -49,19 +49,22 @@ export function PlanPage() {
         <h1 className="text-lg font-bold">Meu plano</h1>
         <span className="w-12" />
       </header>
-      <p className="text-sm text-zinc-500">O cardápio base do dia. No diário, cada item aparece com o botão "Comi".</p>
+      <p className="text-sm text-zinc-500">
+        O cardápio base do dia. No diário, cada item aparece com o botão "Comi".{' '}
+        <Link to="/dieta/refeicoes" className="text-lime-400">Editar refeições</Link>
+      </p>
 
       <MacroBars total={total} goal={profile.data?.goal ?? null} />
 
-      {meals.map(({ key, label }) => (
-        <section key={key} className="card p-4">
+      {plan.data.meals.map((meal) => (
+        <section key={meal.id} className="card p-4">
           <div className="mb-1 flex items-center justify-between">
-            <h2 className="font-semibold">{label}</h2>
+            <h2 className="font-semibold">{meal.name}</h2>
             <span className="text-sm text-zinc-500">
-              {round(sum(items.filter((i) => i.meal === key && i.grams).map((i) => forGrams(i.food, i.grams!))).kcal) || ''}
+              {round(sum(items.filter((i) => i.mealId === meal.id && i.grams).map((i) => forGrams(i.food, i.grams!))).kcal) || ''}
             </span>
           </div>
-          {items.filter((i) => i.meal === key).map((item) => (
+          {items.filter((i) => i.mealId === meal.id).map((item) => (
             <div key={item.key} className="flex items-center gap-2 border-b border-zinc-900 py-2 text-sm last:border-0">
               <span className="flex-1">{item.food.name}</span>
               <div className="w-20"><NumericInput decimal value={item.grams} onCommit={(g) => setItems((prev) => prev!.map((i) => (i.key === item.key ? { ...i, grams: g } : i)))} /></div>
@@ -69,7 +72,7 @@ export function PlanPage() {
               <button onClick={() => setItems((prev) => prev!.filter((i) => i.key !== item.key))} className="px-1 text-zinc-600">✕</button>
             </div>
           ))}
-          <button onClick={() => setAdding(key)} className="mt-2 text-sm text-lime-400">+ Adicionar</button>
+          <button onClick={() => setAdding(meal)} className="mt-2 text-sm text-lime-400">+ Adicionar</button>
         </section>
       ))}
 
@@ -78,10 +81,10 @@ export function PlanPage() {
 
       {adding && (
         <FoodSearch
-          title={meals.find((m) => m.key === adding)!.label}
+          title={adding.name}
           onClose={() => setAdding(null)}
           onAdd={(food, grams) => {
-            setItems((prev) => [...prev!, { key: crypto.randomUUID(), meal: adding, food, grams }])
+            setItems((prev) => [...prev!, { key: crypto.randomUUID(), mealId: adding.id, food, grams }])
             setAdding(null)
           }}
         />

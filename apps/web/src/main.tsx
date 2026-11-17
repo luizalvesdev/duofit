@@ -7,10 +7,12 @@ import { AppLayout } from './components/AppLayout'
 import './index.css'
 import { AuthPage } from './pages/AuthPage'
 import { DietPage } from './pages/diet/DietPage'
+import { MealsPage } from './pages/diet/MealsPage'
 import { PlanPage } from './pages/diet/PlanPage'
 import { DuoPage } from './pages/duo/DuoPage'
 import { MemberExercisePage, MemberRecordsPage, MemberSessionPage } from './pages/duo/MemberRoutes'
 import { MemberPage } from './pages/duo/MemberPage'
+import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordPages'
 import { HomePage } from './pages/HomePage'
 import { ProfilePage } from './pages/ProfilePage'
 import { BodyTab } from './pages/progress/BodyTab'
@@ -31,7 +33,10 @@ createRoot(document.getElementById('root')!).render(
           <Route element={<GuestOnly />}>
             <Route path="/login" element={<AuthPage mode="login" />} />
             <Route path="/cadastro" element={<AuthPage mode="register" />} />
+            <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
           </Route>
+          {/* Outside GuestOnly: an e-mailed link must work even if another account is signed in on this device. */}
+          <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomePage />} />
@@ -45,6 +50,7 @@ createRoot(document.getElementById('root')!).render(
               </Route>
             </Route>
             <Route path="/dieta/plano" element={<PlanPage />} />
+            <Route path="/dieta/refeicoes" element={<MealsPage />} />
             <Route path="/dupla/:campaignId/:userId" element={<MemberPage />} />
             <Route path="/dupla/:campaignId/:userId/recordes" element={<MemberRecordsPage />} />
             <Route path="/dupla/:campaignId/:userId/treino/:id" element={<MemberSessionPage />} />

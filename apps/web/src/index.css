@@ -31,8 +31,53 @@
   color-scheme: dark;
 }
 
+@layer base {
+  /* A bare `grid` gets one implicit `auto` column whose minimum is its children's min-content, and nested
+     `grid-cols-N` (1fr) grids report their max-content there, so pages grew wider than small phones.
+     One shrinkable column instead; any `grid-cols-*` utility still overrides this. */
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Nothing should ever scroll sideways on a phone; `clip` (unlike `hidden`) keeps sticky headers working. */
+html,
+body {
+  overflow-x: clip;
+}
+
+/* iOS Safari zooms into inputs under 16px and leaves the page zoomed (sideways scroll). */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Native date inputs have an intrinsic min width on iOS that overflows narrow grid columns. */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 body {
   @apply bg-zinc-950 font-sans text-[15px] text-zinc-50 antialiased;
+  /* viewport-fit=cover draws under the status bar/notch (iOS home screen app, Android edge-to-edge). */
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Opaque strip behind the status bar so scrolled content never shows through it. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 60;
+  height: env(safe-area-inset-top);
+  background: var(--color-zinc-950);
 }
 
 @utility num {

@@ -21,7 +21,8 @@ type AuthState = {
   user: User | null
   loading: boolean
   login: (email: string, password: string) => Promise<void>
-  register: (input: { email: string; password: string; name: string; inviteCode: string }) => Promise<void>
+  register: (input: { email: string; password: string; name: string }) => Promise<void>
+  resetPassword: (token: string, password: string) => Promise<void>
   logout: () => Promise<void>
 }
 
@@ -67,6 +68,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleAuth],
   )
 
+  const resetPassword = useCallback(
+    async (token: string, password: string) =>
+      handleAuth(await api<AuthResponse>('/auth/reset', { method: 'POST', body: { token, password } })),
+    [handleAuth],
+  )
+
   const logout = useCallback(async () => {
     const unsynced = await db.outbox.count()
     if (unsynced > 0 && !confirm(`${unsynced} treino(s) ainda não sincronizado(s) serão perdidos. Sair mesmo assim?`)) return
@@ -76,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
-  return <AuthContext value={{ user, loading, login, register, logout }}>{children}</AuthContext>
+  return <AuthContext value={{ user, loading, login, register, resetPassword, logout }}>{children}</AuthContext>
 }
 
 export function useAuth() {

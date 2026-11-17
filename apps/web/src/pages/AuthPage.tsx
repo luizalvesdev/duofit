@@ -6,7 +6,6 @@ import { ApiError } from '../lib/api'
 
 const errorMessages: Record<string, string> = {
   invalid_credentials: 'E-mail ou senha incorretos.',
-  invalid_invite: 'Código de convite inválido.',
   email_taken: 'Esse e-mail já tem conta.',
 }
 
@@ -23,7 +22,7 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
     setSubmitting(true)
     try {
       if (isRegister) {
-        await register({ email: form.email, password: form.password, name: form.name, inviteCode: form.inviteCode })
+        await register({ email: form.email, password: form.password, name: form.name })
       } else {
         await login(form.email, form.password)
       }
@@ -61,10 +60,10 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
             autoComplete={isRegister ? 'new-password' : 'current-password'}
           />
         </Field>
-        {isRegister && (
-          <Field label="Código de convite">
-            <Input name="inviteCode" required autoComplete="off" />
-          </Field>
+        {!isRegister && (
+          <Link to="/esqueci-senha" className="-mt-2 justify-self-end text-sm text-zinc-400">
+            Esqueci a senha
+          </Link>
         )}
 
         <ErrorText>{error}</ErrorText>

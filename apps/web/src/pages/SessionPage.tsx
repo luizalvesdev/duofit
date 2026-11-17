@@ -376,7 +376,7 @@ export function SessionPage() {
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 border-b border-[#1f1f23] bg-[#0c0c0f]/95 px-4 py-3 backdrop-blur lg:gap-4 lg:px-10 lg:py-4">
+      <header className="sticky top-[env(safe-area-inset-top)] z-30 flex flex-wrap items-center gap-3 border-b border-[#1f1f23] bg-[#0c0c0f]/95 px-4 py-3 backdrop-blur lg:gap-4 lg:px-10 lg:py-4">
         {notStarted ? (
           <button onClick={() => navigate('/treinos')} aria-label="Voltar" className="grid h-12 w-12 place-items-center rounded-[14px] border border-line-strong bg-surface-2"><Icon name="back" /></button>
         ) : (

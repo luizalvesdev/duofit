@@ -1,6 +1,7 @@
 import type { Goal } from './types'
 
-export type Meal = 'breakfast' | 'lunch' | 'snack' | 'dinner' | 'supper'
+/** User-defined meal slot. Archived meals only appear on past days that still have entries in them. */
+export type Meal = { id: string; name: string; position: number; archived: boolean }
 
 export type Food = {
   id: string
@@ -20,7 +21,7 @@ export type Food = {
 export type FoodLog = {
   id: string
   loggedOn: string
-  meal: Meal
+  mealId: string
   foodId: string
   foodName: string
   grams: number
@@ -31,17 +32,9 @@ export type FoodLog = {
   planItemId: string | null
 }
 
-export type PlanItem = { id: string; meal: Meal; grams: number; position: number; food: Food }
+export type PlanItem = { id: string; mealId: string; grams: number; position: number; food: Food }
 
-export type DayResponse = { logs: FoodLog[]; plan: PlanItem[]; goal: Goal | null }
-
-export const meals: { key: Meal; label: string }[] = [
-  { key: 'breakfast', label: 'Café da manhã' },
-  { key: 'lunch', label: 'Almoço' },
-  { key: 'snack', label: 'Lanche' },
-  { key: 'dinner', label: 'Jantar' },
-  { key: 'supper', label: 'Ceia' },
-]
+export type DayResponse = { logs: FoodLog[]; plan: PlanItem[]; goal: Goal | null; meals: Meal[] }
 
 export type Macros = { kcal: number; protein: number; carbs: number; fat: number }
 

@@ -136,7 +136,7 @@ export function TemplateEditorPage() {
                   <button onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))} aria-label="Remover" className="px-2 text-red-400">✕</button>
                 </div>
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 items-end gap-2">
                 <NumberCell label="Séries" value={item.targetSets} min={1} max={10} onChange={(v) => patchItem(index, { targetSets: v })} />
                 <NumberCell label="Reps mín" value={item.repMin} min={1} max={100} onChange={(v) => patchItem(index, { repMin: v })} />
                 <NumberCell label="Reps máx" value={item.repMax} min={1} max={100} onChange={(v) => patchItem(index, { repMax: v })} />

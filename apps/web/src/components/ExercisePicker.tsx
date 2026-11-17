@@ -86,16 +86,16 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
 
   if (creating) {
     return (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950">
+      <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <CreateExercise initialName={query} onCreated={onSelect} onCancel={() => setCreating(false)} />
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950">
+    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <header className="flex items-center gap-3 border-b border-zinc-900 p-4">
-        <button onClick={onClose} className="text-zinc-400">Fechar</button>
+        <button onClick={onClose} className="shrink-0 text-zinc-400">Fechar</button>
         <Input autoFocus placeholder="Buscar exercício" value={query} onChange={(e) => setQuery(e.target.value)} />
       </header>
 

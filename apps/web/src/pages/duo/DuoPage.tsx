@@ -53,7 +53,7 @@ function Setup({ onDone }: { onDone: () => void }) {
         <h2 className="font-semibold">Entrar com código</h2>
         <div className="flex gap-2">
           <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} placeholder="ABC234" maxLength={6} />
-          <Button onClick={join} disabled={code.length !== 6}>Entrar</Button>
+          <Button onClick={join} disabled={code.length !== 6} className="shrink-0">Entrar</Button>
         </div>
       </section>
       <ErrorText>{error}</ErrorText>

@@ -107,7 +107,7 @@ export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (f
   const list = results ?? recent
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-zinc-950">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {creating ? (
         <CreateFood initialName={query} onCancel={() => setCreating(false)} onCreated={(food) => { setCreating(false); pick(food) }} />
       ) : selected ? (
@@ -130,7 +130,7 @@ export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (f
       ) : (
         <>
           <header className="flex items-center gap-3 border-b border-zinc-900 p-4">
-            <button onClick={onClose} className="text-zinc-400">Fechar</button>
+            <button onClick={onClose} className="shrink-0 text-zinc-400">Fechar</button>
             <Input autoFocus placeholder="Buscar alimento (ex: frango grelhado)" value={query} onChange={(e) => setQuery(e.target.value)} />
           </header>
           <ul className="flex-1 px-4 pb-8">

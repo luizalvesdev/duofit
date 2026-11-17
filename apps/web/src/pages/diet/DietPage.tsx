@@ -4,7 +4,7 @@ import { FoodSearch } from '../../components/FoodSearch'
 import { MacroBars } from '../../components/MacroBars'
 import { NumericInput } from '../../components/NumericInput'
 import { api } from '../../lib/api'
-import { forGrams, meals, round, shiftDate, sum, type DayResponse, type FoodLog, type Meal, type PlanItem } from '../../lib/diet'
+import { forGrams, round, shiftDate, sum, type DayResponse, type FoodLog, type Meal, type PlanItem } from '../../lib/diet'
 import { todayIso } from '../../lib/nutrition'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 
@@ -63,13 +63,13 @@ export function DietPage() {
   const { data, error, reload } = useApi<DayResponse>(`/diet/day/${date}`)
   const [adding, setAdding] = useState<Meal | null>(null)
 
-  async function log(meal: Meal, foodId: string, grams: number, planItemId: string | null = null) {
-    await api('/diet/logs', { method: 'POST', body: { loggedOn: date, meal, foodId, grams, planItemId } })
+  async function log(mealId: string, foodId: string, grams: number, planItemId: string | null = null) {
+    await api('/diet/logs', { method: 'POST', body: { loggedOn: date, mealId, foodId, grams, planItemId } })
     reload()
   }
 
   async function eatWholeMeal(items: PlanItem[]) {
-    for (const item of items) await api('/diet/logs', { method: 'POST', body: { loggedOn: date, meal: item.meal, foodId: item.food.id, grams: item.grams, planItemId: item.id } })
+    for (const item of items) await api('/diet/logs', { method: 'POST', body: { loggedOn: date, mealId: item.mealId, foodId: item.food.id, grams: item.grams, planItemId: item.id } })
     reload()
   }
 
@@ -79,7 +79,10 @@ export function DietPage() {
     <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
         <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Dieta</h1>
-        <Link to="/dieta/plano" className="text-sm text-lime-400">Meu plano</Link>
+        <nav className="flex gap-4 text-sm text-lime-400">
+          <Link to="/dieta/refeicoes">Refeições</Link>
+          <Link to="/dieta/plano">Meu plano</Link>
+        </nav>
       </header>
 
       <div className="flex items-center justify-between rounded-xl bg-zinc-900 px-2 py-1">
@@ -94,20 +97,21 @@ export function DietPage() {
         <>
           <MacroBars total={total} goal={data.goal} />
 
-          {meals.map(({ key, label }) => {
-            const logs = data.logs.filter((l) => l.meal === key)
+          {data.meals.length === 0 && (
+            <p className="text-center text-sm text-zinc-500">
+              Nenhuma refeição. <Link to="/dieta/refeicoes" className="text-lime-400">Criar refeições</Link>
+            </p>
+          )}
+
+          {data.meals.map((meal) => {
+            const logs = data.logs.filter((l) => l.mealId === meal.id)
             const eaten = new Set(logs.map((l) => l.planItemId))
-            const pending = data.plan.filter((p) => p.meal === key && !eaten.has(p.id))
+            const pending = data.plan.filter((p) => p.mealId === meal.id && !eaten.has(p.id))
             const mealKcal = round(sum(logs).kcal)
-            if (logs.length === 0 && pending.length === 0 && key === 'supper') {
-              return (
-                <button key={key} onClick={() => setAdding(key)} className="text-sm text-zinc-500">+ Ceia</button>
-              )
-            }
             return (
-              <section key={key} className="card p-4">
+              <section key={meal.id} className="card p-4">
                 <div className="mb-1 flex items-center justify-between">
-                  <h2 className="font-semibold">{label}</h2>
+                  <h2 className={`font-semibold ${meal.archived ? 'text-zinc-400' : ''}`}>{meal.name}</h2>
                   <span className="text-sm text-zinc-500">{mealKcal > 0 && `${mealKcal} kcal`}</span>
                 </div>
                 {logs.map((l) => <LogRow key={l.id} log={l} onChange={reload} />)}
@@ -119,10 +123,12 @@ export function DietPage() {
                         <button onClick={() => eatWholeMeal(pending)} className="text-xs text-lime-400">Comi tudo</button>
                       )}
                     </div>
-                    {pending.map((p) => <PlanRow key={p.id} item={p} onEat={(item) => log(key, item.food.id, item.grams, item.id)} />)}
+                    {pending.map((p) => <PlanRow key={p.id} item={p} onEat={(item) => log(meal.id, item.food.id, item.grams, item.id)} />)}
                   </div>
                 )}
-                <button onClick={() => setAdding(key)} className="mt-2 text-sm text-lime-400">+ Adicionar</button>
+                {!meal.archived && (
+                  <button onClick={() => setAdding(meal)} className="mt-2 text-sm text-lime-400">+ Adicionar</button>
+                )}
               </section>
             )
           })}
@@ -131,10 +137,10 @@ export function DietPage() {
 
       {adding && (
         <FoodSearch
-          title={meals.find((m) => m.key === adding)!.label}
+          title={adding.name}
           onClose={() => setAdding(null)}
           onAdd={async (food, grams) => {
-            await log(adding, food.id, grams)
+            await log(adding.id, food.id, grams)
             setAdding(null)
           }}
         />

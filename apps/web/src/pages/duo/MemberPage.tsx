@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router'
 import { MacroBars } from '../../components/MacroBars'
-import { meals, round, sum, type FoodLog } from '../../lib/diet'
+import { round, sum, type FoodLog, type Meal } from '../../lib/diet'
 import { objectiveLabels, todayIso } from '../../lib/nutrition'
 import type { Goal } from '../../lib/types'
 import { Loading, Offline, useApi } from '../../lib/useApi'
@@ -10,19 +10,19 @@ import { SessionCard } from '../progress/HistoryTab'
 import type { MemberOverview } from './types'
 
 function SharedDiet({ base }: { base: string }) {
-  const { data, error } = useApi<{ logs: FoodLog[]; goal: Goal | null }>(`${base}/diet/${todayIso()}`)
+  const { data, error } = useApi<{ logs: FoodLog[]; goal: Goal | null; meals: Meal[] }>(`${base}/diet/${todayIso()}`)
   if (error) return null
   if (!data) return <Loading />
   return (
     <section className="grid gap-3">
       <h2 className="font-semibold">Dieta de hoje</h2>
       <MacroBars total={sum(data.logs)} goal={data.goal} />
-      {meals.map(({ key, label }) => {
-        const logs = data.logs.filter((l) => l.meal === key)
+      {data.meals.map((meal) => {
+        const logs = data.logs.filter((l) => l.mealId === meal.id)
         if (logs.length === 0) return null
         return (
-          <div key={key} className="text-sm">
-            <p className="text-zinc-400">{label} · {round(sum(logs).kcal)} kcal</p>
+          <div key={meal.id} className="text-sm">
+            <p className="text-zinc-400">{meal.name} · {round(sum(logs).kcal)} kcal</p>
             <p className="text-zinc-500">{logs.map((l) => `${l.foodName} (${l.grams}g)`).join(', ')}</p>
           </div>
         )

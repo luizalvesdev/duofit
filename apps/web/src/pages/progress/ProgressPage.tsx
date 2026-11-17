@@ -19,7 +19,7 @@ export function ProgressPage() {
                 to={tab.to}
                 end={tab.end}
                 className={({ isActive }) =>
-                  `grid h-11 flex-1 place-items-center rounded-[10px] px-5 text-sm ${isActive ? 'bg-line-strong font-bold text-zinc-50' : 'font-semibold text-zinc-400'}`
+                  `grid h-11 flex-1 place-items-center rounded-[10px] px-2 text-sm sm:px-5 ${isActive ? 'bg-line-strong font-bold text-zinc-50' : 'font-semibold text-zinc-400'}`
                 }
               >
                 {tab.label}

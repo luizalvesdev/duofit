@@ -11,7 +11,7 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 }
 
 const control =
-  'w-full h-12 rounded-xl bg-surface-2 border border-line-strong px-3.5 text-zinc-50 outline-none focus:border-lime-400 focus:ring-4 focus:ring-lime-400/15 transition'
+  'w-full min-w-0 h-12 rounded-xl bg-surface-2 border border-line-strong px-3.5 text-zinc-50 outline-none focus:border-lime-400 focus:ring-4 focus:ring-lime-400/15 transition'
 
 export const Input = (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={control} />
 
