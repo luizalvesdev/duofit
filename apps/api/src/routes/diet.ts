@@ -54,7 +54,7 @@ const planSchema = z.object({
   items: z.array(z.object({ mealId: z.uuid(), foodId: z.uuid(), grams })).max(80),
 })
 
-const MAX_MEALS = 12
+export const MAX_MEALS = 12
 const mealName = z.object({ name: z.string().trim().min(1).max(40) })
 
 const mealColumns = {

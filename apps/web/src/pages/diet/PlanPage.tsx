@@ -56,6 +56,14 @@ export function PlanPage() {
 
       <MacroBars total={total} goal={profile.data?.goal ?? null} />
 
+      <Link to="/ia/dieta/montar" className="card flex items-center justify-between gap-3 p-4 text-sm">
+        <span className="flex flex-col gap-0.5">
+          <b>Montar plano com IA</b>
+          <span className="text-zinc-400">Gera um dia de alimentação a partir da sua meta.</span>
+        </span>
+        <span className="text-lime-400">→</span>
+      </Link>
+
       <Link to="/ia/dieta" className="card flex items-center justify-between gap-3 p-4 text-sm">
         <span className="flex flex-col gap-0.5">
           <b>Revisar com IA</b>

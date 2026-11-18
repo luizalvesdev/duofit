@@ -84,6 +84,7 @@ const messages: Record<string, string> = {
   ai_unavailable: 'A IA está indisponível no momento. Tente de novo em instantes.',
   ai_not_configured: 'A IA ainda não está configurada neste servidor.',
   ai_questionnaire_incomplete: 'Responda o questionário antes de gerar o treino.',
+  too_many_meals: 'Você já tem o máximo de refeições. Remova alguma e tente de novo.',
   future_week: 'Essa semana ainda não aconteceu.',
 }
 
@@ -128,3 +129,14 @@ export type DietReview = {
 
 export const AI_DIET_DISCLAIMER =
   'Sugestões geradas por IA a partir do seu plano e das suas metas. Não substituem acompanhamento com nutricionista.'
+
+export type DietDraft = {
+  rationale: string
+  target: Macros
+  totals: Macros
+  meals: { name: string; items: ({ foodId: string; foodName: string; grams: number } & Macros)[] }[]
+  warnings: string[]
+}
+
+export const AI_DIET_DRAFT_DISCLAIMER =
+  'Rascunho gerado por IA. As calorias e os macros são calculados pelo app a partir da sua meta. Não substitui acompanhamento com nutricionista.'

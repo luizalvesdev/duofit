@@ -6,12 +6,13 @@ import { createDb } from '../db/client'
 import { aiInsights, aiKindEnum, aiProfiles } from '../db/schema'
 import type { AppEnv } from '../env'
 import { generateStructured } from '../lib/ai/client'
-import { applyDietReview, applyWorkoutDraft } from '../lib/ai/apply'
+import { applyDietDraft, applyDietReview, applyWorkoutDraft } from '../lib/ai/apply'
 import { AiError, HttpError } from '../lib/ai/errors'
 import { weekContext } from '../lib/ai/context'
 import { buildDietReview, dietPlanContext, dietReviewModelSchema } from '../lib/ai/diet'
+import { buildDietDraft, dietDraftContext, dietDraftModelSchema } from '../lib/ai/dietDraft'
 import { hashInput } from '../lib/ai/guard'
-import { DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK, WORKOUT_TASK } from '../lib/ai/prompts'
+import { DIET_DRAFT_TASK, DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK, WORKOUT_TASK } from '../lib/ai/prompts'
 import { answersSchema } from '../lib/ai/questionnaire'
 import { cachedInsight, guardedUser } from '../lib/ai/run'
 import { weekReviewSchema } from '../lib/ai/schemas'
@@ -123,6 +124,7 @@ export const aiRoutes = new Hono<AppEnv>()
       z.object({
         swapIndexes: z.array(z.number().int().min(0)).max(20).optional(),
         templates: z.array(templateSchema).max(6).optional(),
+        replacePlan: z.boolean().optional(),
       }),
     ),
     async (c) => {
@@ -138,6 +140,11 @@ export const aiRoutes = new Hono<AppEnv>()
       const body = c.req.valid('json')
       if (insight.kind === 'diet_review') return c.json(await applyDietReview(db, userId, insight, body.swapIndexes ?? []))
       if (insight.kind === 'workout_draft') return c.json(await applyWorkoutDraft(db, userId, insight, body.templates ?? []))
+      if (insight.kind === 'diet_draft') {
+        // Replacing the plan is destructive, so the client must say it knows.
+        if (body.replacePlan !== true) return c.json({ error: 'confirmation_required' }, 400)
+        return c.json(await applyDietDraft(db, userId, insight))
+      }
       return c.json({ error: 'not_applicable' }, 400)
     },
   )
@@ -192,6 +199,32 @@ export const aiRoutes = new Hono<AppEnv>()
           effort: 'medium',
         })
         return { ...result, data: buildWorkoutDraft(ctx, result.data, answers.daysPerWeek!) }
+      },
+    })
+    return c.json({ status: 'ok' as const, cached, insight })
+  })
+  .post('/drafts/diet', async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const { answers, profile } = await guardedUser(db, userId)
+
+    const ctx = await dietDraftContext(db, userId, answers, profile)
+    if (!ctx.enough) return c.json({ status: 'insufficient_data' as const })
+
+    const { insight, cached } = await cachedInsight(db, {
+      userId,
+      kind: 'diet_draft',
+      inputHash: await hashInput({ v: PROMPT_VERSION, input: ctx.input }),
+      generate: async () => {
+        const result = await generateStructured({
+          env: c.env,
+          system: systemFor(DIET_DRAFT_TASK),
+          input: ctx.input,
+          schema: dietDraftModelSchema,
+          maxTokens: 5000,
+          effort: 'medium',
+        })
+        return { ...result, data: buildDietDraft(ctx, result.data) }
       },
     })
     return c.json({ status: 'ok' as const, cached, insight })

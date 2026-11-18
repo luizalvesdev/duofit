@@ -79,3 +79,19 @@ Formato:
 - "rationale": 2 a 3 frases explicando a divisão escolhida e por quê.
 - "split": nome curto da divisão (ex.: "ABC", "Superior/Inferior", "Corpo inteiro").
 - "templates": lista de fichas com "name" (ex.: "A · Peito e tríceps"), "weekdays" e "exercises" (n, sets, repMin, repMax, restSeconds, notes).`
+
+export const DIET_DRAFT_TASK = `Tarefa: montar um rascunho de plano de dieta para um dia, usando apenas alimentos da lista de candidatos. A pessoa vai revisar antes de usar.
+
+Entrada (JSON): "target" (meta diária já calculada: kcal e gramas de proteína, carboidrato e gordura), "objective", "meals" (nomes das refeições que a pessoa já tem, em ordem), "mealsPerDay", "restrictions", "allergies", "dislikedFoods", "budget" e "candidates" (alimentos disponíveis: "n" é o id, mais nome, categoria e valores por 100 g).
+
+Regras:
+- Use somente alimentos de "candidates", referenciados pelo número "n". Nunca invente alimentos nem números. Os candidatos já excluem restrições, alergias e alimentos que a pessoa não come.
+- Monte as refeições usando os nomes de "meals". Se "mealsPerDay" for menor que a quantidade de "meals", use só as primeiras refeições (as demais podem ficar de fora). Se for maior, acrescente refeições com nomes simples (ex.: "Lanche da tarde").
+- Pense em comida de verdade: café da manhã com pão, ovos, fruta ou iogurte; almoço e jantar com uma proteína, um carboidrato (arroz, batata, macarrão), leguminosa e legumes ou salada; lanches com fruta, laticínio ou oleaginosas. Evite combinações estranhas e repetir o mesmo alimento em todas as refeições.
+- "grams" é a quantidade em gramas de cada item, em porções realistas (por exemplo, 100 a 150 g de carne, 100 a 200 g de arroz cozido, 1 a 2 ovos de 50 g cada).
+- Procure chegar perto da meta de calorias e proteína. O sistema ajusta as porções para fechar a meta, então foque em boas escolhas e boa distribuição. Cada refeição com 2 a 6 itens.
+- Priorize alimentos simples e acessíveis. Se "budget" for "low", evite itens caros.
+
+Formato:
+- "rationale": 2 a 3 frases explicando as escolhas.
+- "meals": lista de refeições, cada uma com "name" e "items" (n, grams).`
