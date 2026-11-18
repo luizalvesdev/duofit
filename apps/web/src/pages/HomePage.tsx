@@ -174,6 +174,14 @@ export function HomePage() {
               </Link>
             </div>
           )}
+          <Link to="/ia/semana" className="card flex items-center justify-between gap-4 p-5">
+            <span className="flex flex-col gap-1">
+              <span className="label-caps">Assistente</span>
+              <span className="text-[15px] font-semibold">Analisar minha semana</span>
+              <span className="text-sm text-zinc-400">O que melhorar e o que fazer na próxima semana.</span>
+            </span>
+            <Icon name="chart" className="shrink-0 text-lime-400" />
+          </Link>
           {campaign && <DuoFeed campaign={campaign} />}
         </div>
       </div>

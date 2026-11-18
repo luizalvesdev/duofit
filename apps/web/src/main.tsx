@@ -10,6 +10,7 @@ import { DietPage } from './pages/diet/DietPage'
 import { MealsPage } from './pages/diet/MealsPage'
 import { PlanPage } from './pages/diet/PlanPage'
 import { DuoPage } from './pages/duo/DuoPage'
+import { WeekReviewPage } from './pages/ai/WeekReviewPage'
 import { MemberExercisePage, MemberRecordsPage, MemberSessionPage } from './pages/duo/MemberRoutes'
 import { MemberPage } from './pages/duo/MemberPage'
 import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordPages'
@@ -57,6 +58,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/dupla/:campaignId/:userId/exercicio/:id" element={<MemberExercisePage />} />
             <Route path="/progresso/treino/:id" element={<SessionDetailPage />} />
             <Route path="/progresso/exercicio/:id" element={<ExerciseProgressPage />} />
+            <Route path="/ia/semana" element={<WeekReviewPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/treinos/nova" element={<TemplateEditorPage />} />
             <Route path="/treinos/:id" element={<TemplateEditorPage />} />

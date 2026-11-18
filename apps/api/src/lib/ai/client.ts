@@ -49,7 +49,7 @@ export async function generateStructured<T>({
 }: Options<T>): Promise<Generated<T>> {
   const client = createAi(env)
   const model = env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL
-  const jsonSchema = z.toJSONSchema(schema) as Record<string, unknown>
+  const jsonSchema = toOutputSchema(schema)
   const usage = { inputTokens: 0, outputTokens: 0 }
 
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -81,6 +81,27 @@ export async function generateStructured<T>({
   }
 
   throw new AiError('ai_invalid_output', 502, 'The model returned output that did not match the schema')
+}
+
+// Structured outputs reject range/length keywords. The zod schema still enforces them when parsing.
+const UNSUPPORTED = new Set([
+  '$schema', 'minimum', 'maximum', 'exclusiveMinimum', 'exclusiveMaximum', 'multipleOf',
+  'minLength', 'maxLength', 'minItems', 'maxItems', 'uniqueItems', 'pattern', 'format',
+])
+
+function toOutputSchema(schema: ZodType): Record<string, unknown> {
+  const strip = (node: unknown): unknown => {
+    if (Array.isArray(node)) return node.map(strip)
+    if (node && typeof node === 'object') {
+      return Object.fromEntries(
+        Object.entries(node as Record<string, unknown>)
+          .filter(([key]) => !UNSUPPORTED.has(key))
+          .map(([key, value]) => [key, strip(value)]),
+      )
+    }
+    return node
+  }
+  return strip(z.toJSONSchema(schema)) as Record<string, unknown>
 }
 
 function mapSdkError(e: unknown) {

@@ -6,7 +6,11 @@ type Db = ReturnType<typeof createDb>
 
 const workingVolume = sql<number>`coalesce(sum(case when ${sessionSets.setType} <> 'warmup' then ${sessionSets.weightKg} * ${sessionSets.reps} else 0 end), 0)`.mapWith(Number)
 
-export async function listSessions(db: Db, userId: string, { before, limit = 20 }: { before?: string; limit?: number } = {}) {
+export async function listSessions(
+  db: Db,
+  userId: string,
+  { before, from, to, limit = 20 }: { before?: string; from?: string; to?: string; limit?: number } = {},
+) {
   const sessions = await db
     .select({
       id: workoutSessions.id,
@@ -16,7 +20,14 @@ export async function listSessions(db: Db, userId: string, { before, limit = 20 
       durationSeconds: workoutSessions.durationSeconds,
     })
     .from(workoutSessions)
-    .where(and(eq(workoutSessions.userId, userId), before ? lt(workoutSessions.startedAt, new Date(before)) : undefined))
+    .where(
+      and(
+        eq(workoutSessions.userId, userId),
+        before ? lt(workoutSessions.startedAt, new Date(before)) : undefined,
+        from ? gte(workoutSessions.startedAt, new Date(from)) : undefined,
+        to ? lt(workoutSessions.startedAt, new Date(to)) : undefined,
+      ),
+    )
     .orderBy(desc(workoutSessions.startedAt))
     .limit(limit)
 
@@ -141,7 +152,7 @@ export async function exerciseBests(db: Db, userId: string) {
     .sort((a, b) => b.lastDone.localeCompare(a.lastDone))
 }
 
-export async function recentRecords(db: Db, userIds: string[], limit = 20) {
+export async function recentRecords(db: Db, userIds: string[], limit = 20, range?: { from: Date; to: Date }) {
   if (userIds.length === 0) return []
   return db
     .select({
@@ -158,7 +169,13 @@ export async function recentRecords(db: Db, userIds: string[], limit = 20) {
     .from(personalRecords)
     .innerJoin(exercises, eq(exercises.id, personalRecords.exerciseId))
     .innerJoin(sessionSets, eq(sessionSets.id, personalRecords.setId))
-    .where(inArray(personalRecords.userId, userIds))
+    .where(
+      and(
+        inArray(personalRecords.userId, userIds),
+        range ? gte(personalRecords.achievedAt, range.from) : undefined,
+        range ? lt(personalRecords.achievedAt, range.to) : undefined,
+      ),
+    )
     .orderBy(desc(personalRecords.achievedAt))
     .limit(limit)
 }

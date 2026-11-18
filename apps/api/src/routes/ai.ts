@@ -3,12 +3,16 @@ import { and, desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { createDb } from '../db/client'
-import { aiInsights, aiKindEnum, aiProfiles } from '../db/schema'
+import { aiInsights, aiKindEnum, aiProfiles, profiles } from '../db/schema'
 import type { AppEnv } from '../env'
 import { generateStructured } from '../lib/ai/client'
 import { AiError } from '../lib/ai/errors'
-import { PING_TASK, systemFor } from '../lib/ai/prompts'
-import { answersSchema } from '../lib/ai/questionnaire'
+import { weekContext } from '../lib/ai/context'
+import { assertConsent, assertSafe, hashInput, rateLimit } from '../lib/ai/guard'
+import { PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK } from '../lib/ai/prompts'
+import { type Answers, answersSchema } from '../lib/ai/questionnaire'
+import { weekReviewSchema } from '../lib/ai/schemas'
+import { mondayOf, todayLocal } from '../lib/week'
 import { requireAuth } from '../middleware/auth'
 
 const profileBody = z.object({
@@ -47,15 +51,21 @@ export const aiRoutes = new Hono<AppEnv>()
   })
   .get(
     '/insights',
-    zValidator('query', z.object({ kind: z.enum(aiKindEnum.enumValues).optional() })),
+    zValidator('query', z.object({ kind: z.enum(aiKindEnum.enumValues).optional(), periodStart: z.iso.date().optional() })),
     async (c) => {
-      const { kind } = c.req.valid('query')
+      const { kind, periodStart } = c.req.valid('query')
       const db = createDb(c.env.DATABASE_URL)
       const userId = c.get('userId')
       const insights = await db
         .select()
         .from(aiInsights)
-        .where(kind ? and(eq(aiInsights.userId, userId), eq(aiInsights.kind, kind)) : eq(aiInsights.userId, userId))
+        .where(
+          and(
+            eq(aiInsights.userId, userId),
+            kind ? eq(aiInsights.kind, kind) : undefined,
+            periodStart ? eq(aiInsights.periodStart, periodStart) : undefined,
+          ),
+        )
         .orderBy(desc(aiInsights.createdAt))
         .limit(50)
       return c.json({ insights })
@@ -69,6 +79,62 @@ export const aiRoutes = new Hono<AppEnv>()
       .where(and(eq(aiInsights.id, c.req.param('id')), eq(aiInsights.userId, c.get('userId'))))
       .returning({ id: aiInsights.id })
     return row ? c.json({ ok: true }) : c.json({ error: 'not_found' }, 404)
+  })
+  .post('/week-review', zValidator('json', z.object({ weekStart: z.iso.date().optional() })), async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const today = todayLocal()
+    const requested = c.req.valid('json').weekStart ?? today
+    if (requested > today) return c.json({ error: 'future_week' }, 422)
+    const weekStart = mondayOf(requested)
+
+    const aiProfile = await assertConsent(db, userId)
+    const [profile] = await db.select({ birthDate: profiles.birthDate }).from(profiles).where(eq(profiles.userId, userId))
+    if (!profile) throw new AiError('ai_profile_required', 422, 'Complete your profile first')
+    const answers = aiProfile.answers as Answers
+    assertSafe(profile.birthDate, answers)
+
+    const { context, hasEnoughData } = await weekContext(db, userId, weekStart, answers)
+    if (!hasEnoughData) return c.json({ status: 'insufficient_data' as const })
+
+    const inputHash = await hashInput({ v: PROMPT_VERSION, context })
+    const findCached = async () => {
+      const [row] = await db
+        .select()
+        .from(aiInsights)
+        .where(and(eq(aiInsights.userId, userId), eq(aiInsights.kind, 'week_review'), eq(aiInsights.inputHash, inputHash)))
+      return row
+    }
+
+    const cached = await findCached()
+    if (cached) return c.json({ status: 'ok' as const, cached: true, insight: cached })
+
+    await rateLimit(db, userId)
+    const result = await generateStructured({
+      env: c.env,
+      system: systemFor(WEEK_TASK),
+      input: context,
+      schema: weekReviewSchema,
+      maxTokens: 3000,
+      effort: 'low',
+    })
+    console.log('ai week-review', JSON.stringify({ model: result.model, usage: result.usage }))
+
+    await db
+      .insert(aiInsights)
+      .values({
+        userId,
+        kind: 'week_review',
+        periodStart: weekStart,
+        inputHash,
+        output: result.data,
+        model: result.model,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+      })
+      .onConflictDoNothing()
+    const insight = await findCached()
+    return c.json({ status: 'ok' as const, cached: false, insight })
   })
   // Dev-only connectivity check: confirms credentials, region, model id and that the SDK runs in the Worker.
   .post('/_ping', async (c) => {

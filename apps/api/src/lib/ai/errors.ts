@@ -1,6 +1,7 @@
 export type AiErrorCode =
   | 'ai_consent_required'
   | 'ai_safety_block'
+  | 'ai_profile_required'
   | 'ai_rate_limited'
   | 'ai_refused'
   | 'ai_truncated'
