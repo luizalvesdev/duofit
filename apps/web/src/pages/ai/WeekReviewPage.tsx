@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { Page, PageTitle } from '../../components/AppLayout'
 import { Icon } from '../../components/Icon'
+import { AiConsent } from '../../components/AiConsent'
 import { Button, ErrorText } from '../../components/ui'
 import { api } from '../../lib/api'
 import {
@@ -19,36 +20,6 @@ import { todayIso } from '../../lib/nutrition'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 
 type Result = { status: 'ok'; cached: boolean; insight: Insight<WeekReview> } | { status: 'insufficient_data' }
-
-function Consent({ onAccepted }: { onAccepted: () => void }) {
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  async function accept() {
-    setSaving(true)
-    try {
-      await api('/ai/profile', { method: 'PUT', body: { consent: true } })
-      onAccepted()
-    } catch {
-      setError('Não foi possível salvar. Tente de novo.')
-      setSaving(false)
-    }
-  }
-
-  return (
-    <section className="card grid gap-4 p-6">
-      <span className="label-caps">Antes de começar</span>
-      <h2 className="num text-2xl font-bold">Análise com IA</h2>
-      <div className="grid gap-2 text-sm leading-relaxed text-zinc-400">
-        <p>Para analisar sua semana, o DuoFit envia a um modelo de IA (Claude, da Anthropic, via Amazon Bedrock) um resumo dos seus números: treinos, dieta e peso.</p>
-        <p>Nome, e-mail e identificadores não são enviados. Você pode revogar o consentimento quando quiser.</p>
-        <p>A IA só sugere. Ela não é personal trainer nem nutricionista, e nada muda no seu app sem você aprovar.</p>
-      </div>
-      <ErrorText>{error}</ErrorText>
-      <Button onClick={accept} disabled={saving}>Aceitar e continuar</Button>
-    </section>
-  )
-}
 
 function Score({ label, value }: { label: string; value: number }) {
   return (
@@ -157,7 +128,7 @@ export function WeekReviewPage() {
 
       {profile.error && <Offline />}
       {!profile.data && !profile.error && <Loading />}
-      {profile.data && !profile.data.consentAt && <Consent onAccepted={profile.reload} />}
+      {profile.data && !profile.data.consentAt && <AiConsent onAccepted={profile.reload} />}
 
       {profile.data?.consentAt && (
         <>

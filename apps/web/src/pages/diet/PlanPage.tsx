@@ -56,6 +56,14 @@ export function PlanPage() {
 
       <MacroBars total={total} goal={profile.data?.goal ?? null} />
 
+      <Link to="/ia/dieta" className="card flex items-center justify-between gap-3 p-4 text-sm">
+        <span className="flex flex-col gap-0.5">
+          <b>Revisar com IA</b>
+          <span className="text-zinc-400">Sugere trocas com base na sua meta. Revisa o plano salvo.</span>
+        </span>
+        <span className="text-lime-400">→</span>
+      </Link>
+
       {plan.data.meals.map((meal) => (
         <section key={meal.id} className="card p-4">
           <div className="mb-1 flex items-center justify-between">

@@ -67,3 +67,19 @@ export function weekLabel(weekStart: string) {
   const fmt = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
   return `${fmt(weekStart)} – ${fmt(addDays(weekStart, 6))}`
 }
+
+type Macros = { kcal: number; proteinG: number; carbsG: number; fatG: number }
+type DietLine = { foodName: string; grams: number } & Macros
+
+export type DietReview = {
+  summary: string
+  issues: { issue: string; why: string }[]
+  tips: string[]
+  target: Macros | null
+  totals: Macros
+  swaps: { planItemId: string; meal: string; reason: string; from: DietLine; to: DietLine & { foodId: string } }[]
+  discarded: number
+}
+
+export const AI_DIET_DISCLAIMER =
+  'Sugestões geradas por IA a partir do seu plano e das suas metas. Não substituem acompanhamento com nutricionista.'

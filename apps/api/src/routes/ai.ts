@@ -3,14 +3,17 @@ import { and, desc, eq } from 'drizzle-orm'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { createDb } from '../db/client'
-import { aiInsights, aiKindEnum, aiProfiles, profiles } from '../db/schema'
+import { aiInsights, aiKindEnum, aiProfiles } from '../db/schema'
 import type { AppEnv } from '../env'
 import { generateStructured } from '../lib/ai/client'
-import { AiError } from '../lib/ai/errors'
+import { applyDietReview } from '../lib/ai/apply'
+import { AiError, HttpError } from '../lib/ai/errors'
 import { weekContext } from '../lib/ai/context'
-import { assertConsent, assertSafe, hashInput, rateLimit } from '../lib/ai/guard'
-import { PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK } from '../lib/ai/prompts'
-import { type Answers, answersSchema } from '../lib/ai/questionnaire'
+import { buildDietReview, dietPlanContext, dietReviewModelSchema } from '../lib/ai/diet'
+import { hashInput } from '../lib/ai/guard'
+import { DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK } from '../lib/ai/prompts'
+import { answersSchema } from '../lib/ai/questionnaire'
+import { cachedInsight, guardedUser } from '../lib/ai/run'
 import { weekReviewSchema } from '../lib/ai/schemas'
 import { mondayOf, todayLocal } from '../lib/week'
 import { requireAuth } from '../middleware/auth'
@@ -25,6 +28,7 @@ export const aiRoutes = new Hono<AppEnv>()
   .use(requireAuth)
   .onError((e, c) => {
     if (e instanceof AiError) return c.json({ error: e.code, message: e.message }, e.status)
+    if (e instanceof HttpError) return c.json({ error: e.code }, e.status)
     console.error(e)
     return c.json({ error: 'internal_error' }, 500)
   })
@@ -88,53 +92,71 @@ export const aiRoutes = new Hono<AppEnv>()
     if (requested > today) return c.json({ error: 'future_week' }, 422)
     const weekStart = mondayOf(requested)
 
-    const aiProfile = await assertConsent(db, userId)
-    const [profile] = await db.select({ birthDate: profiles.birthDate }).from(profiles).where(eq(profiles.userId, userId))
-    if (!profile) throw new AiError('ai_profile_required', 422, 'Complete your profile first')
-    const answers = aiProfile.answers as Answers
-    assertSafe(profile.birthDate, answers)
+    const { answers } = await guardedUser(db, userId)
 
     const { context, hasEnoughData } = await weekContext(db, userId, weekStart, answers)
     if (!hasEnoughData) return c.json({ status: 'insufficient_data' as const })
 
-    const inputHash = await hashInput({ v: PROMPT_VERSION, context })
-    const findCached = async () => {
-      const [row] = await db
+    const { insight, cached } = await cachedInsight(db, {
+      userId,
+      kind: 'week_review',
+      periodStart: weekStart,
+      inputHash: await hashInput({ v: PROMPT_VERSION, context }),
+      generate: () =>
+        generateStructured({
+          env: c.env,
+          system: systemFor(WEEK_TASK),
+          input: context,
+          schema: weekReviewSchema,
+          maxTokens: 3000,
+          effort: 'low',
+        }),
+    })
+    return c.json({ status: 'ok' as const, cached, insight })
+  })
+  .post(
+    '/insights/:id/apply',
+    zValidator('json', z.object({ swapIndexes: z.array(z.number().int().min(0)).max(20).optional() })),
+    async (c) => {
+      const db = createDb(c.env.DATABASE_URL)
+      const userId = c.get('userId')
+      const [insight] = await db
         .select()
         .from(aiInsights)
-        .where(and(eq(aiInsights.userId, userId), eq(aiInsights.kind, 'week_review'), eq(aiInsights.inputHash, inputHash)))
-      return row
-    }
+        .where(and(eq(aiInsights.id, c.req.param('id')), eq(aiInsights.userId, userId)))
+      if (!insight) return c.json({ error: 'not_found' }, 404)
+      if (insight.status !== 'ready') return c.json({ error: 'already_handled' }, 409)
 
-    const cached = await findCached()
-    if (cached) return c.json({ status: 'ok' as const, cached: true, insight: cached })
+      const body = c.req.valid('json')
+      if (insight.kind === 'diet_review') return c.json(await applyDietReview(db, userId, insight, body.swapIndexes ?? []))
+      return c.json({ error: 'not_applicable' }, 400)
+    },
+  )
+  .post('/diet-review', async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const { answers } = await guardedUser(db, userId)
 
-    await rateLimit(db, userId)
-    const result = await generateStructured({
-      env: c.env,
-      system: systemFor(WEEK_TASK),
-      input: context,
-      schema: weekReviewSchema,
-      maxTokens: 3000,
-      effort: 'low',
+    const ctx = await dietPlanContext(db, userId, answers)
+    if (!ctx.hasPlan) return c.json({ status: 'insufficient_data' as const })
+
+    const { insight, cached } = await cachedInsight(db, {
+      userId,
+      kind: 'diet_review',
+      inputHash: await hashInput({ v: PROMPT_VERSION, input: ctx.input }),
+      generate: async () => {
+        const result = await generateStructured({
+          env: c.env,
+          system: systemFor(DIET_TASK),
+          input: ctx.input,
+          schema: dietReviewModelSchema,
+          maxTokens: 3000,
+          effort: 'low',
+        })
+        return { ...result, data: buildDietReview(ctx, result.data) }
+      },
     })
-    console.log('ai week-review', JSON.stringify({ model: result.model, usage: result.usage }))
-
-    await db
-      .insert(aiInsights)
-      .values({
-        userId,
-        kind: 'week_review',
-        periodStart: weekStart,
-        inputHash,
-        output: result.data,
-        model: result.model,
-        inputTokens: result.usage.inputTokens,
-        outputTokens: result.usage.outputTokens,
-      })
-      .onConflictDoNothing()
-    const insight = await findCached()
-    return c.json({ status: 'ok' as const, cached: false, insight })
+    return c.json({ status: 'ok' as const, cached, insight })
   })
   // Dev-only connectivity check: confirms credentials, region, model id and that the SDK runs in the Worker.
   .post('/_ping', async (c) => {

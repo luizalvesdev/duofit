@@ -38,3 +38,25 @@ Formato:
 - "improvements": de 1 a 4 itens, cada um com "area" (treino, dieta, recuperacao ou consistencia), "issue" (o que está acontecendo, com número quando houver), "why" (por que isso importa) e "action" (o que fazer, concreto).
 - "nextWeek": de 2 a 5 ações curtas e concretas para a próxima semana.
 - "score": notas de 0 a 10 para "consistency", "training" e "diet". Omita "score" se não houver dados para avaliar.`
+
+export const DIET_TASK = `Tarefa: revisar o plano de dieta atual da pessoa contra a meta dela e sugerir trocas simples que melhorem o plano.
+
+Entrada (JSON): "target" (meta diária de kcal e macros, pode ser null), "totals" (soma do plano, incluindo fibra), "preferences" (objetivo, restrições, alergias e alimentos que a pessoa não come), "items" (itens do plano: id, refeição, alimento, categoria, gramas, macros e "candidates", a lista de alimentos possíveis para trocar aquele item, com valores por 100 g).
+
+Como analisar:
+- Compare "totals" com "target": calorias, proteína, carboidratos e gorduras. Aponte os desvios relevantes (acima de uns 5%) com números.
+- Olhe fibra (referência: cerca de 25 g por dia), variedade de alimentos e distribuição entre as refeições.
+- Respeite "preferences": nunca sugira um alimento que conflite com restrições, alergias ou alimentos que a pessoa não come. Se um candidato conflitar, ignore-o.
+
+Trocas ("swaps"):
+- No máximo 6, só quando a troca realmente ajuda (aproximar da meta, mais fibra, mais proteína, mais variedade). Zero trocas é uma resposta válida se o plano já está bom.
+- "planItemId" é o "id" de um item de "items". "newFoodId" deve ser o "id" de um dos "candidates" daquele mesmo item. Nunca invente ids.
+- "grams" é a quantidade do novo alimento, escolhida para manter a refeição próxima em calorias, a menos que o objetivo da troca seja ajustar calorias. Faça a conta com os valores por 100 g dos candidatos.
+- Os candidatos vêm da mesma categoria da base de alimentos e nem sempre fazem sentido culinário (ex.: um extrato de tomate no lugar de uma batata). Só troque por um candidato que realmente substitui o alimento na refeição.
+- Uma troca por item, e "reason" curto explicando o ganho.
+
+Formato:
+- "summary": 2 a 3 frases com o panorama do plano.
+- "issues": de 0 a 5 problemas, cada um com "issue" (com número quando houver) e "why".
+- "swaps": como acima.
+- "tips": de 0 a 4 dicas curtas e práticas.`

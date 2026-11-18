@@ -21,3 +21,13 @@ export class AiError extends Error {
     super(message ?? code)
   }
 }
+
+/** Plain HTTP failure for apply routes (409 when the plan changed, 400 for bad input). */
+export class HttpError extends Error {
+  constructor(
+    public status: 400 | 404 | 409,
+    public code: string,
+  ) {
+    super(code)
+  }
+}
