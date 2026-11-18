@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm'
-import { boolean, check, date, index, integer, numeric, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
+import { boolean, check, date, index, integer, jsonb, numeric, pgEnum, pgTable, primaryKey, smallint, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core'
 
 export const sexEnum = pgEnum('sex', ['male', 'female'])
 export const objectiveEnum = pgEnum('objective', ['lose', 'maintain', 'gain'])
@@ -209,3 +209,32 @@ export const passwordResets = pgTable('password_resets', {
   usedAt: timestamp({ withTimezone: true }),
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index().on(t.userId)])
+
+export const aiKindEnum = pgEnum('ai_kind', ['week_review', 'diet_review', 'workout_draft', 'diet_draft'])
+export const aiStatusEnum = pgEnum('ai_status', ['ready', 'applied', 'dismissed'])
+
+// One row per user: the questionnaire answers and the LGPD consent to send metrics to the model.
+export const aiProfiles = pgTable('ai_profiles', {
+  userId: uuid().primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  answers: jsonb().$type<Record<string, unknown>>().notNull().default({}),
+  consentAt: timestamp({ withTimezone: true }),
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+})
+
+// Generated proposals. The unique (user, kind, input hash) doubles as the response cache.
+export const aiInsights = pgTable('ai_insights', {
+  id: uuid().primaryKey().defaultRandom(),
+  userId: uuid().notNull().references(() => users.id, { onDelete: 'cascade' }),
+  kind: aiKindEnum().notNull(),
+  periodStart: date(),
+  inputHash: text().notNull(),
+  output: jsonb().notNull(),
+  status: aiStatusEnum().notNull().default('ready'),
+  model: text().notNull(),
+  inputTokens: integer().notNull(),
+  outputTokens: integer().notNull(),
+  createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  index().on(t.userId, t.kind, t.createdAt),
+  uniqueIndex().on(t.userId, t.kind, t.inputHash),
+])
