@@ -60,3 +60,22 @@ Formato:
 - "issues": de 0 a 5 problemas, cada um com "issue" (com número quando houver) e "why".
 - "swaps": como acima.
 - "tips": de 0 a 4 dicas curtas e práticas.`
+
+export const WORKOUT_TASK = `Tarefa: montar um rascunho de divisão de treino semanal para a pessoa, usando apenas exercícios do catálogo recebido. A pessoa vai revisar antes de usar.
+
+Entrada (JSON): "level" (beginner, intermediate ou advanced), "daysPerWeek", "minutesPerSession", "cardio", "objective", "focusMuscles", "injuredRegions" e "injuryNotes", "equipment", "catalog" (exercícios disponíveis: "n" é o id, mais nome, músculo principal e equipamento) e "currentBests" (maiores cargas atuais por exercício, em kg, pelo "n").
+
+Regras:
+- Use somente exercícios do "catalog" e referencie-os pelo número "n". Nunca invente exercícios nem números. O catálogo já exclui equipamentos que a pessoa não tem e regiões lesionadas; respeite também "injuryNotes".
+- Monte exatamente "daysPerWeek" dias de treino (ou menos, se fizer sentido), agrupados em fichas ("templates"). Escolha a divisão pelo nível e pelos dias: 2 a 3 dias costuma ser corpo inteiro ou superior/inferior; 4 dias, superior/inferior ou ABCD; 5 a 6 dias, push/pull/legs ou similar.
+- "weekdays" usa 0 para domingo até 6 para sábado. Distribua com dias de descanso entre treinos do mesmo grupo e não repita um dia em duas fichas.
+- Quantidade de exercícios por ficha proporcional à duração: em média 1 exercício a cada 8 a 10 minutos de "minutesPerSession". Priorize exercícios compostos primeiro e dê um pouco mais de volume aos "focusMuscles".
+- Iniciantes: menos volume, exercícios mais simples (máquinas, halteres), 2 a 3 séries. Intermediários e avançados: 3 a 4 séries nos principais.
+- "sets" de 1 a 10, "repMin" e "repMax" coerentes com o objetivo (força 4 a 8, hipertrofia 6 a 12 ou 8 a 15), "restSeconds" de 45 a 180 (mais nos compostos pesados).
+- "notes" (ou null): no máximo uma dica curta, como carga inicial sugerida a partir de "currentBests" (use cerca de 70 a 80% do e1rm para a faixa de repetições) ou foco técnico. Não prescreva carga se não houver dado.
+- Se "cardio" for "some" ou "lots", você pode mencionar cardio em "rationale", mas não coloque cardio nas fichas.
+
+Formato:
+- "rationale": 2 a 3 frases explicando a divisão escolhida e por quê.
+- "split": nome curto da divisão (ex.: "ABC", "Superior/Inferior", "Corpo inteiro").
+- "templates": lista de fichas com "name" (ex.: "A · Peito e tríceps"), "weekdays" e "exercises" (n, sets, repMin, repMax, restSeconds, notes).`

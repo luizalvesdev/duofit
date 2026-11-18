@@ -11,7 +11,9 @@ import { MealsPage } from './pages/diet/MealsPage'
 import { PlanPage } from './pages/diet/PlanPage'
 import { DuoPage } from './pages/duo/DuoPage'
 import { DietReviewPage } from './pages/ai/DietReviewPage'
+import { QuestionnairePage } from './pages/ai/QuestionnairePage'
 import { WeekReviewPage } from './pages/ai/WeekReviewPage'
+import { WorkoutDraftPage } from './pages/ai/WorkoutDraftPage'
 import { MemberExercisePage, MemberRecordsPage, MemberSessionPage } from './pages/duo/MemberRoutes'
 import { MemberPage } from './pages/duo/MemberPage'
 import { ForgotPasswordPage, ResetPasswordPage } from './pages/PasswordPages'
@@ -61,6 +63,8 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/progresso/exercicio/:id" element={<ExerciseProgressPage />} />
             <Route path="/ia/semana" element={<WeekReviewPage />} />
             <Route path="/ia/dieta" element={<DietReviewPage />} />
+            <Route path="/ia/questionario" element={<QuestionnairePage />} />
+            <Route path="/ia/treino" element={<WorkoutDraftPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/treinos/nova" element={<TemplateEditorPage />} />
             <Route path="/treinos/:id" element={<TemplateEditorPage />} />

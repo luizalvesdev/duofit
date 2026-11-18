@@ -2,6 +2,8 @@ import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import type { createDb } from '../../db/client'
 import { aiInsights, foods, mealPlanItems } from '../../db/schema'
 import type { DietReview } from './diet'
+import { allExercisesVisible } from '../access'
+import { createTemplate, type TemplateInput } from '../templates'
 import { HttpError } from './errors'
 
 type Db = ReturnType<typeof createDb>
@@ -36,4 +38,19 @@ export async function applyDietReview(db: Db, userId: string, insight: Insight, 
   ]
   await db.batch([first, ...rest])
   return { applied: chosen.length }
+}
+
+/**
+ * Creates the workout templates the user approved. The client sends the (possibly edited) templates,
+ * so they go through the same schema and exercise-access check as a normal template save.
+ */
+export async function applyWorkoutDraft(db: Db, userId: string, insight: Insight, templates: TemplateInput[]) {
+  if (templates.length === 0) throw new HttpError(400, 'invalid_selection')
+  if (!(await allExercisesVisible(db, userId, templates.flatMap((t) => t.items.map((i) => i.exerciseId))))) {
+    throw new HttpError(400, 'unknown_exercise')
+  }
+
+  for (const template of templates) await createTemplate(db, userId, template)
+  await markApplied(db, insight.id)
+  return { applied: templates.length }
 }

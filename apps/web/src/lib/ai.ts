@@ -1,4 +1,5 @@
 import { ApiError } from './api'
+import type { Equipment, Muscle } from './workout'
 
 export type WeekReview = {
   summary: string
@@ -17,7 +18,50 @@ export type Insight<T> = {
   createdAt: string
 }
 
-export type AiProfile = { consentAt: string | null; answers: Record<string, unknown> }
+export type Answers = Partial<{
+  experience: 'beginner' | 'intermediate' | 'advanced'
+  daysPerWeek: number
+  minutesPerSession: number
+  equipment: Equipment[]
+  injuryRegions: Muscle[]
+  injuryNotes: string
+  focusMuscles: Muscle[]
+  cardio: 'none' | 'some' | 'lots'
+  mealsPerDay: number
+  dietRestrictions: ('vegetarian' | 'vegan' | 'lactose_free' | 'gluten_free')[]
+  allergies: string
+  dislikedFoods: string
+  budget: 'low' | 'medium' | 'high'
+  screening: { pregnantOrNursing: boolean; eatingDisorderHistory: boolean; relevantMedicalCondition: boolean; relevantMedication: boolean }
+}>
+
+export type AiProfile = { consentAt: string | null; answers: Answers }
+
+export const hasWorkoutAnswers = (a: Answers) =>
+  !!a.experience && !!a.daysPerWeek && !!a.minutesPerSession && !!a.equipment?.length
+
+export type WorkoutDraft = {
+  rationale: string
+  split: string
+  templates: {
+    name: string
+    weekdays: number[]
+    items: {
+      exerciseId: string
+      exerciseName: string
+      muscle: string
+      targetSets: number
+      repMin: number
+      repMax: number
+      restSeconds: number
+      notes: string | null
+    }[]
+  }[]
+  discarded: number
+}
+
+export const AI_WORKOUT_DISCLAIMER =
+  'Rascunho gerado por IA a partir das suas respostas. Não substitui um personal trainer. Ajuste a carga com cuidado e pare se sentir dor.'
 
 export const areaLabels: Record<WeekReview['improvements'][number]['area'], string> = {
   treino: 'Treino',
@@ -39,6 +83,7 @@ const messages: Record<string, string> = {
   ai_invalid_output: 'A IA respondeu em um formato inesperado. Tente de novo.',
   ai_unavailable: 'A IA está indisponível no momento. Tente de novo em instantes.',
   ai_not_configured: 'A IA ainda não está configurada neste servidor.',
+  ai_questionnaire_incomplete: 'Responda o questionário antes de gerar o treino.',
   future_week: 'Essa semana ainda não aconteceu.',
 }
 

@@ -6,16 +6,18 @@ import { createDb } from '../db/client'
 import { aiInsights, aiKindEnum, aiProfiles } from '../db/schema'
 import type { AppEnv } from '../env'
 import { generateStructured } from '../lib/ai/client'
-import { applyDietReview } from '../lib/ai/apply'
+import { applyDietReview, applyWorkoutDraft } from '../lib/ai/apply'
 import { AiError, HttpError } from '../lib/ai/errors'
 import { weekContext } from '../lib/ai/context'
 import { buildDietReview, dietPlanContext, dietReviewModelSchema } from '../lib/ai/diet'
 import { hashInput } from '../lib/ai/guard'
-import { DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK } from '../lib/ai/prompts'
+import { DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK, WORKOUT_TASK } from '../lib/ai/prompts'
 import { answersSchema } from '../lib/ai/questionnaire'
 import { cachedInsight, guardedUser } from '../lib/ai/run'
 import { weekReviewSchema } from '../lib/ai/schemas'
+import { buildWorkoutDraft, missingWorkoutAnswers, workoutDraftContext, workoutDraftModelSchema } from '../lib/ai/workout'
 import { mondayOf, todayLocal } from '../lib/week'
+import { templateSchema } from '../lib/templates'
 import { requireAuth } from '../middleware/auth'
 
 const profileBody = z.object({
@@ -116,7 +118,13 @@ export const aiRoutes = new Hono<AppEnv>()
   })
   .post(
     '/insights/:id/apply',
-    zValidator('json', z.object({ swapIndexes: z.array(z.number().int().min(0)).max(20).optional() })),
+    zValidator(
+      'json',
+      z.object({
+        swapIndexes: z.array(z.number().int().min(0)).max(20).optional(),
+        templates: z.array(templateSchema).max(6).optional(),
+      }),
+    ),
     async (c) => {
       const db = createDb(c.env.DATABASE_URL)
       const userId = c.get('userId')
@@ -129,6 +137,7 @@ export const aiRoutes = new Hono<AppEnv>()
 
       const body = c.req.valid('json')
       if (insight.kind === 'diet_review') return c.json(await applyDietReview(db, userId, insight, body.swapIndexes ?? []))
+      if (insight.kind === 'workout_draft') return c.json(await applyWorkoutDraft(db, userId, insight, body.templates ?? []))
       return c.json({ error: 'not_applicable' }, 400)
     },
   )
@@ -154,6 +163,35 @@ export const aiRoutes = new Hono<AppEnv>()
           effort: 'low',
         })
         return { ...result, data: buildDietReview(ctx, result.data) }
+      },
+    })
+    return c.json({ status: 'ok' as const, cached, insight })
+  })
+  .post('/drafts/workout', async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const userId = c.get('userId')
+    const { answers } = await guardedUser(db, userId)
+    if (missingWorkoutAnswers(answers).length) {
+      throw new AiError('ai_questionnaire_incomplete', 422, 'Answer the questionnaire before generating a workout')
+    }
+
+    const ctx = await workoutDraftContext(db, userId, answers)
+    if (!ctx.enough) return c.json({ status: 'insufficient_data' as const })
+
+    const { insight, cached } = await cachedInsight(db, {
+      userId,
+      kind: 'workout_draft',
+      inputHash: await hashInput({ v: PROMPT_VERSION, input: ctx.input }),
+      generate: async () => {
+        const result = await generateStructured({
+          env: c.env,
+          system: systemFor(WORKOUT_TASK),
+          input: ctx.input,
+          schema: workoutDraftModelSchema,
+          maxTokens: 5000,
+          effort: 'medium',
+        })
+        return { ...result, data: buildWorkoutDraft(ctx, result.data, answers.daysPerWeek!) }
       },
     })
     return c.json({ status: 'ok' as const, cached, insight })
