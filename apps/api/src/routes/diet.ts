@@ -162,6 +162,37 @@ export const dietRoutes = new Hono<AppEnv>()
       .returning(foodColumns)
     return c.json({ food }, 201)
   })
+  // Looks a barcode up on Open Food Facts (public DB) and returns per-100g macros to prefill a custom food.
+  // Only the barcode and a generic client name leave the server; no user data is sent.
+  .get('/foods/barcode/:code', async (c) => {
+    const code = c.req.param('code').replace(/\D/g, '')
+    if (code.length < 6 || code.length > 14) return c.json({ error: 'invalid_code' }, 400)
+    let data: { status?: number; product?: { product_name?: string; product_name_pt?: string; brands?: string; serving_quantity?: number | string; nutriments?: Record<string, number | undefined> } }
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=product_name,product_name_pt,brands,nutriments,serving_quantity`, {
+        headers: { 'User-Agent': 'DuoFit/1.0 (diet tracker)' },
+      })
+      if (!res.ok) return c.json({ error: 'not_found' }, 404)
+      data = (await res.json()) as typeof data
+    } catch {
+      return c.json({ error: 'lookup_failed' }, 502)
+    }
+    if (!data || data.status === 0 || !data.product) return c.json({ error: 'not_found' }, 404)
+    const n = data.product.nutriments ?? {}
+    const kcal = n['energy-kcal_100g'] ?? n['energy-kcal_value']
+    if (kcal == null) return c.json({ error: 'no_nutrition' }, 404)
+    const r1 = (v: number | undefined) => Math.min(100, Math.max(0, Math.round((Number(v) || 0) * 10) / 10))
+    const name = String(data.product.product_name_pt || data.product.product_name || data.product.brands || `Produto ${code}`).slice(0, 100)
+    const serving = Number(data.product.serving_quantity)
+    return c.json({
+      name,
+      kcal: Math.min(900, Math.max(0, Math.round(Number(kcal) || 0))),
+      protein: r1(n.proteins_100g),
+      carbs: r1(n.carbohydrates_100g),
+      fat: r1(n.fat_100g),
+      servingGrams: Number.isFinite(serving) && serving > 0 ? Math.round(serving) : null,
+    })
+  })
   .get('/day/:date', async (c) => {
     const date = isoDate.safeParse(c.req.param('date'))
     if (!date.success) return c.json({ error: 'invalid_date' }, 400)

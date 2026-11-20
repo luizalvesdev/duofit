@@ -4,8 +4,10 @@ import { Hono } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import { z } from 'zod'
 import { createDb } from '../db/client'
-import { campaignMembers, campaigns, users } from '../db/schema'
+import { aiInsights, campaignMembers, campaigns, users } from '../db/schema'
 import type { AppEnv } from '../env'
+import { applyDuoDietDraft } from '../lib/ai/apply'
+import { AiError, HttpError } from '../lib/ai/errors'
 import { currentGoal, exerciseBests, exerciseProgress, listBodyLogs, listSessions, recentRecords, sessionDetail } from '../lib/stats'
 import { requireAuth } from '../middleware/auth'
 import { loadDiary, mealsForDay } from './diet'
@@ -62,7 +64,8 @@ const member = new Hono<MemberEnv>()
       listSessions(db, targetId, { limit: 10 }),
       exerciseBests(db, targetId),
     ])
-    return c.json({ user, goal, body, sessions, bests, sharesDiet: c.get('targetSharesDiet') })
+    // Diet is always shared between campaign members, so the partner's diet is never hidden.
+    return c.json({ user, goal, body, sessions, bests, sharesDiet: true })
   })
   .get('/sessions/:sessionId', async (c) => {
     const db = createDb(c.env.DATABASE_URL)
@@ -80,7 +83,6 @@ const member = new Hono<MemberEnv>()
     return c.json({ points: await exerciseProgress(db, c.get('targetId'), c.req.param('exerciseId')) })
   })
   .get('/diet/:date', async (c) => {
-    if (!c.get('targetSharesDiet')) return c.json({ error: 'diet_private' }, 403)
     const date = isoDate.safeParse(c.req.param('date'))
     if (!date.success) return c.json({ error: 'invalid_date' }, 400)
     const db = createDb(c.env.DATABASE_URL)
@@ -95,6 +97,11 @@ const member = new Hono<MemberEnv>()
 
 export const campaignRoutes = new Hono<AppEnv>()
   .use(requireAuth)
+  .onError((e, c) => {
+    if (e instanceof AiError) return c.json({ error: e.code, message: e.message }, e.status)
+    if (e instanceof HttpError) return c.json({ error: e.code }, e.status)
+    throw e
+  })
   .get('/', async (c) => {
     const db = createDb(c.env.DATABASE_URL)
     const mine = await db
@@ -126,15 +133,6 @@ export const campaignRoutes = new Hono<AppEnv>()
     await db.insert(campaignMembers).values({ campaignId: campaign.id, userId: c.get('userId') }).onConflictDoNothing()
     return c.json({ campaignId: campaign.id })
   })
-  .patch('/:id/me', zValidator('json', z.object({ shareDiet: z.boolean() })), async (c) => {
-    const db = createDb(c.env.DATABASE_URL)
-    const updated = await db
-      .update(campaignMembers)
-      .set(c.req.valid('json'))
-      .where(and(eq(campaignMembers.campaignId, c.req.param('id')), eq(campaignMembers.userId, c.get('userId'))))
-      .returning({ shareDiet: campaignMembers.shareDiet })
-    return updated.length ? c.json(updated[0]) : c.json({ error: 'not_found' }, 404)
-  })
   .delete('/:id/me', async (c) => {
     const db = createDb(c.env.DATABASE_URL)
     const campaignId = c.req.param('id')
@@ -155,5 +153,21 @@ export const campaignRoutes = new Hono<AppEnv>()
     ])
     const sessions = sessionsByMember.flat().sort((a, b) => +new Date(b.startedAt) - +new Date(a.startedAt)).slice(0, 20)
     return c.json({ members, sessions, records })
+  })
+  // Applies a shared couple diet draft (kind diet_draft_duo) to each member's own plan: one menu, but each
+  // member keeps their own copy with their own portions and only the foods they eat.
+  .post('/:id/diet/apply', zValidator('json', z.object({ insightId: z.uuid() })), async (c) => {
+    const db = createDb(c.env.DATABASE_URL)
+    const campaignId = c.req.param('id')
+    const userId = c.get('userId')
+    if (!(await isMember(db, campaignId, userId))) return c.json({ error: 'not_found' }, 404)
+    const [insight] = await db
+      .select()
+      .from(aiInsights)
+      .where(and(eq(aiInsights.id, c.req.valid('json').insightId), eq(aiInsights.userId, userId)))
+    if (!insight || insight.kind !== 'diet_draft_duo') return c.json({ error: 'not_found' }, 404)
+    if (insight.status !== 'ready') return c.json({ error: 'already_handled' }, 409)
+    const result = await applyDuoDietDraft(db, insight)
+    return c.json({ ok: true, ...result })
   })
   .route('/:id/members/:userId', member)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import { useAuth } from '../../auth/AuthContext'
 import { Button, ErrorText, Field, Input } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
@@ -10,6 +10,18 @@ import { RecordLine } from '../progress/RecordsTab'
 import type { Campaign, Feed } from './types'
 
 const formatDate = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+
+/** Sub-tabs shared by the two Dupla screens: Atividade (/dupla) and Duo Dieta (/dupla/dieta). */
+export function DuoTabs() {
+  const tab = ({ isActive }: { isActive: boolean }) =>
+    `flex-1 rounded-lg py-2 text-center font-semibold ${isActive ? 'bg-lime-400 text-ink' : 'text-zinc-400'}`
+  return (
+    <nav className="flex gap-1 rounded-xl bg-zinc-900 p-1 text-sm">
+      <NavLink to="/dupla" end className={tab}>Atividade</NavLink>
+      <NavLink to="/dupla/dieta" end className={tab}>Duo Dieta</NavLink>
+    </nav>
+  )
+}
 
 function Setup({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState('')
@@ -64,14 +76,8 @@ function Setup({ onDone }: { onDone: () => void }) {
 function CampaignView({ campaign, onChange }: { campaign: Campaign; onChange: () => void }) {
   const { user } = useAuth()
   const feed = useApi<Feed>(`/campaigns/${campaign.id}/feed`)
-  const me = campaign.members.find((m) => m.userId === user?.id)
   const names = new Map(campaign.members.map((m) => [m.userId, m.userId === user?.id ? 'Você' : m.name]))
   const [copied, setCopied] = useState(false)
-
-  async function toggleDiet() {
-    await api(`/campaigns/${campaign.id}/me`, { method: 'PATCH', body: { shareDiet: !me?.shareDiet } })
-    onChange()
-  }
 
   async function leave() {
     if (!confirm('Sair da campanha? Seus dados continuam salvos, só deixam de ser compartilhados.')) return
@@ -97,10 +103,7 @@ function CampaignView({ campaign, onChange }: { campaign: Campaign; onChange: ()
             {campaign.inviteCode} <span className="text-xs font-normal text-zinc-500">{copied ? 'copiado' : 'copiar'}</span>
           </button>
         </div>
-        <label className="flex items-center justify-between text-sm">
-          <span>Compartilhar minha dieta</span>
-          <input type="checkbox" checked={me?.shareDiet ?? false} onChange={toggleDiet} className="h-5 w-5 accent-lime-400" />
-        </label>
+        <p className="text-xs text-zinc-500">Treinos, progresso e dieta são compartilhados entre a dupla.</p>
       </section>
 
       <section className="grid grid-cols-2 gap-3">
@@ -154,6 +157,7 @@ export function DuoPage() {
   return (
     <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Dupla</h1>
+      <DuoTabs />
       {error && <Offline />}
       {!data && !error && <Loading />}
       {data && (campaign ? <CampaignView campaign={campaign} onChange={reload} /> : <Setup onDone={reload} />)}

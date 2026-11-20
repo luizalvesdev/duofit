@@ -52,6 +52,9 @@ export const sum = (items: Macros[]): Macros =>
 
 export const round = (value: number) => Math.round(value)
 
+/** TACO food names are comma-separated ("Pão, trigo, forma, integral"); show them as a single readable phrase. */
+export const foodLabel = (name: string) => name.split(',').map((s) => s.trim()).filter(Boolean).join(' ')
+
 export const shiftDate = (iso: string, days: number) => {
   const d = new Date(`${iso}T12:00:00`)
   d.setDate(d.getDate() + days)

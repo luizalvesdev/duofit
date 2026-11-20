@@ -10,8 +10,14 @@ export type Bindings = {
   AWS_ACCESS_KEY_ID?: string
   AWS_SECRET_ACCESS_KEY?: string
   AWS_REGION?: string
-  /** Bedrock model ID. Defaults to Claude Haiku 5.5. */
+  /** Bedrock model ID. Used when ANTHROPIC_API_KEY is not set. */
   BEDROCK_MODEL_ID?: string
+  /** First-party Anthropic API key. When set, the AI calls go to the Anthropic API instead of Bedrock. */
+  ANTHROPIC_API_KEY?: string
+  /** Default first-party model id (e.g. claude-haiku-5-5). Used only with ANTHROPIC_API_KEY. */
+  AI_MODEL?: string
+  /** Stronger first-party model for the hardest flows (e.g. claude-sonnet-5-5). Optional. */
+  AI_MODEL_STRONG?: string
 }
 
 export type AppEnv = {

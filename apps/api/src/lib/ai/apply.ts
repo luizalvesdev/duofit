@@ -3,7 +3,7 @@ import type { createDb } from '../../db/client'
 import { aiInsights, foods, mealPlanItems, meals, workoutTemplates } from '../../db/schema'
 import { searchable } from '../search'
 import { activeMeals, MAX_MEALS } from '../../routes/diet'
-import type { DietDraft } from './dietDraft'
+import type { DietDraft, DuoDietDraft } from './dietDraft'
 import type { DietReview } from './diet'
 import { allExercisesVisible } from '../access'
 import { createTemplate, saveItems, type TemplateInput } from '../templates'
@@ -96,6 +96,50 @@ export async function applyDietDraft(db: Db, userId: string, insight: Insight) {
   ]
   await db.batch([first, ...rest])
   return { applied: rows.length, createdMeals: created.length }
+}
+
+/**
+ * Applies a couple's diet draft: each member has their own complete plan, which replaces that member's meals
+ * and plan. Each member's write is its own batch, so one failing leaves the other's old plan intact.
+ */
+export async function applyDuoDietDraft(db: Db, insight: Insight) {
+  const draft = insight.output as DuoDietDraft
+  for (const member of draft.members) {
+    const userId = member.userId
+    const memberMeals = member.meals.filter((m) => m.items.length)
+    const foodIds = memberMeals.flatMap((m) => m.items.map((it) => it.foodId))
+    if (foodIds.length === 0) continue
+
+    const [visible, current] = await Promise.all([
+      db.select({ id: foods.id }).from(foods).where(and(inArray(foods.id, foodIds), or(isNull(foods.ownerId), eq(foods.ownerId, userId)))),
+      activeMeals(db, userId),
+    ])
+    if (visible.length !== new Set(foodIds).size) throw new HttpError(400, 'unknown_food')
+
+    const byName = new Map(current.map((m) => [searchable(m.name), m.id]))
+    const created: { id: string; userId: string; name: string; position: number }[] = []
+    const rows: { userId: string; mealId: string; foodId: string; grams: number; position: number }[] = []
+    for (const m of memberMeals) {
+      const key = searchable(m.name)
+      let mealId = byName.get(key)
+      if (!mealId) {
+        if (current.length + created.length >= MAX_MEALS) throw new HttpError(400, 'too_many_meals')
+        mealId = crypto.randomUUID()
+        created.push({ id: mealId, userId, name: m.name, position: current.length + created.length })
+        byName.set(key, mealId)
+      }
+      for (const it of m.items) rows.push({ userId, mealId, foodId: it.foodId, grams: it.grams, position: rows.length })
+    }
+
+    const [first, ...rest] = [
+      ...(created.length ? [db.insert(meals).values(created)] : []),
+      db.delete(mealPlanItems).where(eq(mealPlanItems.userId, userId)),
+      db.insert(mealPlanItems).values(rows),
+    ]
+    await db.batch([first, ...rest])
+  }
+  await markApplied(db, insight.id)
+  return { applied: draft.members.length }
 }
 
 /**

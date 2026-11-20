@@ -159,7 +159,13 @@ function Form({ initial }: { initial: Answers }) {
             <Input value={a.allergies ?? ''} maxLength={300} onChange={(e) => set({ allergies: e.target.value })} placeholder="Ex.: amendoim, frutos do mar" />
           </Field>
           <Field label="Alimentos que você não come (opcional)">
-            <Input value={a.dislikedFoods ?? ''} maxLength={300} onChange={(e) => set({ dislikedFoods: e.target.value })} placeholder="Ex.: fígado, beterraba" />
+            <Input value={a.dislikedFoods ?? ''} maxLength={300} onChange={(e) => set({ dislikedFoods: e.target.value })} placeholder="Ex.: fígado, beterraba, abobrinha" />
+          </Field>
+          <Field label="Preferências de alimentos (opcional)">
+            <Input value={a.foodPreferences ?? ''} maxLength={300} onChange={(e) => set({ foodPreferences: e.target.value })} placeholder="Ex.: prefiro frango e carnes, evito pernil" />
+          </Field>
+          <Field label="Suplementos que usa (opcional)">
+            <Input value={a.supplements ?? ''} maxLength={300} onChange={(e) => set({ supplements: e.target.value })} placeholder="Ex.: whey, creatina, albumina" />
           </Field>
           <Group title="Orçamento">
             <Chips options={budgetLabels} selected={a.budget ? [a.budget] : []} onToggle={(v) => set({ budget: v })} />

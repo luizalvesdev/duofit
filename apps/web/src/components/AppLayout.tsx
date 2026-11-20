@@ -4,12 +4,22 @@ import { useAuth } from '../auth/AuthContext'
 import { startBackgroundSync } from '../lib/sync'
 import { Icon, type IconName } from './Icon'
 
-const tabs: { to: string; label: string; icon: IconName }[] = [
+type Tab = { to: string; label: string; icon: IconName; sub?: { to: string; label: string }[] }
+
+const tabs: Tab[] = [
   { to: '/', label: 'Início', icon: 'home' },
   { to: '/treinos', label: 'Treinos', icon: 'dumbbell' },
   { to: '/dieta', label: 'Dieta', icon: 'fork' },
   { to: '/progresso', label: 'Progresso', icon: 'chart' },
-  { to: '/dupla', label: 'Dupla', icon: 'duo' },
+  {
+    to: '/dupla',
+    label: 'Dupla',
+    icon: 'duo',
+    sub: [
+      { to: '/dupla', label: 'Atividade' },
+      { to: '/dupla/dieta', label: 'Duo Dieta' },
+    ],
+  },
 ]
 
 export function Logo({ className = 'text-[34px]' }: { className?: string }) {
@@ -24,19 +34,42 @@ export function AppLayout() {
     <div className="min-h-dvh lg:flex">
       <nav aria-label="Navegação principal" className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-1 border-r border-[#1f1f23] bg-[#0c0c0f] px-4 py-7 lg:flex">
         <Logo className="px-3 pb-5 text-[34px]" />
-        {tabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.to === '/'}
-            className={({ isActive }) =>
-              `flex min-h-12 items-center gap-3 rounded-xl px-3 ${isActive ? 'bg-lime-400/12 font-bold text-lime-400' : 'font-semibold text-zinc-400 hover:text-zinc-200'}`
-            }
-          >
-            <Icon name={tab.icon} />
-            {tab.label}
-          </NavLink>
-        ))}
+        {tabs.map((tab) =>
+          tab.sub ? (
+            <div key={tab.to} className="grid gap-1">
+              <div className="flex min-h-12 items-center gap-3 rounded-xl px-3 font-semibold text-zinc-400">
+                <Icon name={tab.icon} />
+                {tab.label}
+              </div>
+              <div className="ml-[22px] grid gap-1 border-l border-[#1f1f23] pl-3">
+                {tab.sub.map((s) => (
+                  <NavLink
+                    key={s.to}
+                    to={s.to}
+                    end
+                    className={({ isActive }) =>
+                      `flex min-h-10 items-center rounded-xl px-3 text-sm ${isActive ? 'bg-lime-400/12 font-bold text-lime-400' : 'font-semibold text-zinc-400 hover:text-zinc-200'}`
+                    }
+                  >
+                    {s.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.to === '/'}
+              className={({ isActive }) =>
+                `flex min-h-12 items-center gap-3 rounded-xl px-3 ${isActive ? 'bg-lime-400/12 font-bold text-lime-400' : 'font-semibold text-zinc-400 hover:text-zinc-200'}`
+              }
+            >
+              <Icon name={tab.icon} />
+              {tab.label}
+            </NavLink>
+          ),
+        )}
         <div className="flex-1" />
         <Link to="/perfil" className="flex items-center gap-2.5 rounded-xl border border-line px-3 py-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-full bg-lime-400 font-extrabold text-ink">{user?.name.charAt(0).toUpperCase()}</span>

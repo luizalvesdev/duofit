@@ -4,7 +4,7 @@ import { FoodSearch } from '../../components/FoodSearch'
 import { MacroBars } from '../../components/MacroBars'
 import { NumericInput } from '../../components/NumericInput'
 import { api } from '../../lib/api'
-import { forGrams, round, shiftDate, sum, type DayResponse, type FoodLog, type Meal, type PlanItem } from '../../lib/diet'
+import { foodLabel, forGrams, round, shiftDate, sum, type DayResponse, type FoodLog, type Meal, type PlanItem } from '../../lib/diet'
 import { todayIso } from '../../lib/nutrition'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 
@@ -33,7 +33,7 @@ function LogRow({ log, onChange }: { log: FoodLog; onChange: () => void }) {
   return (
     <div className="border-b border-zinc-900 py-2 last:border-0">
       <button onClick={() => setEditing((v) => !v)} className="flex w-full items-center justify-between gap-3 text-left text-sm">
-        <span className="flex-1">{log.foodName} <span className="text-zinc-500">· {log.grams}g</span></span>
+        <span className="flex-1">{foodLabel(log.foodName)} <span className="text-zinc-500">· {log.grams}g</span></span>
         <span className="text-zinc-300">{round(log.kcal)} kcal</span>
       </button>
       {editing && (
@@ -52,7 +52,7 @@ function PlanRow({ item, onEat }: { item: PlanItem; onEat: (item: PlanItem) => v
   const kcal = round(forGrams(item.food, item.grams).kcal)
   return (
     <div className="flex items-center justify-between gap-3 border-b border-dashed border-zinc-800 py-2 text-sm text-zinc-500 last:border-0">
-      <span className="flex-1">{item.food.name} · {item.grams}g · {kcal} kcal</span>
+      <span className="flex-1">{foodLabel(item.food.name)} · {item.grams}g · {kcal} kcal</span>
       <button onClick={() => onEat(item)} className="rounded-lg border border-lime-400/50 px-3 py-1 text-xs font-semibold text-lime-400">Comi</button>
     </div>
   )
@@ -79,9 +79,11 @@ export function DietPage() {
     <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
         <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Dieta</h1>
-        <nav className="flex gap-4 text-sm text-lime-400">
-          <Link to="/dieta/refeicoes">Refeições</Link>
-          <Link to="/dieta/plano">Meu plano</Link>
+        <nav className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
+          <Link to="/ia/dieta" className="text-zinc-300">Questionar a IA</Link>
+          <Link to="/ia/dieta/montar" className="text-zinc-300">Montar com IA</Link>
+          <Link to="/dieta/refeicoes" className="text-lime-400">Refeições</Link>
+          <Link to="/dieta/plano" className="text-lime-400">Meu plano</Link>
         </nav>
       </header>
 

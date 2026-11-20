@@ -5,6 +5,7 @@ import { AiConsent } from '../../components/AiConsent'
 import { MacroBars } from '../../components/MacroBars'
 import { Button, ErrorText } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
+import { foodLabel } from '../../lib/diet'
 import { AI_DIET_DRAFT_DISCLAIMER, aiErrorMessage, type AiProfile, type DietDraft, type Insight } from '../../lib/ai'
 import type { ProfileResponse } from '../../lib/types'
 import { Loading, Offline, useApi } from '../../lib/useApi'
@@ -56,7 +57,7 @@ function Preview({ insight }: { insight: Insight<DietDraft> }) {
           </div>
           {meal.items.map((item) => (
             <div key={item.foodId} className="flex items-center gap-2 border-t border-zinc-900 py-2 text-sm">
-              <span className="flex-1">{item.foodName}</span>
+              <span className="flex-1">{foodLabel(item.foodName)}</span>
               <span className="num text-zinc-400">{item.grams} g</span>
               <span className="num w-16 text-right text-xs text-zinc-500">{item.kcal} kcal</span>
             </div>

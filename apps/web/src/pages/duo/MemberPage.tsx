@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { MacroBars } from '../../components/MacroBars'
-import { round, sum, type FoodLog, type Meal } from '../../lib/diet'
+import { foodLabel, round, shiftDate, sum, type FoodLog, type Meal } from '../../lib/diet'
 import { objectiveLabels, todayIso } from '../../lib/nutrition'
 import type { Goal } from '../../lib/types'
 import { Loading, Offline, useApi } from '../../lib/useApi'
@@ -9,21 +10,35 @@ import { BodyChart } from '../progress/BodyTab'
 import { SessionCard } from '../progress/HistoryTab'
 import type { MemberOverview } from './types'
 
+function dietDayLabel(iso: string) {
+  const today = todayIso()
+  if (iso === today) return 'Hoje'
+  if (iso === shiftDate(today, -1)) return 'Ontem'
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+}
+
 function SharedDiet({ base }: { base: string }) {
-  const { data, error } = useApi<{ logs: FoodLog[]; goal: Goal | null; meals: Meal[] }>(`${base}/diet/${todayIso()}`)
-  if (error) return null
-  if (!data) return <Loading />
+  const [date, setDate] = useState(todayIso())
+  const { data, error } = useApi<{ logs: FoodLog[]; goal: Goal | null; meals: Meal[] }>(`${base}/diet/${date}`)
   return (
     <section className="grid gap-3">
-      <h2 className="font-semibold">Dieta de hoje</h2>
-      <MacroBars total={sum(data.logs)} goal={data.goal} />
-      {data.meals.map((meal) => {
+      <h2 className="font-semibold">Dieta</h2>
+      <div className="flex items-center justify-between rounded-xl bg-zinc-900 px-2 py-1">
+        <button onClick={() => setDate((d) => shiftDate(d, -1))} className="px-4 py-2 text-zinc-400">‹</button>
+        <button onClick={() => setDate(todayIso())} className="font-semibold">{dietDayLabel(date)}</button>
+        <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={date >= todayIso()} className="px-4 py-2 text-zinc-400 disabled:opacity-20">›</button>
+      </div>
+      {error && <Offline />}
+      {!data && !error && <Loading />}
+      {data && <MacroBars total={sum(data.logs)} goal={data.goal} />}
+      {data && data.logs.length === 0 && <p className="py-2 text-center text-sm text-zinc-600">Nada registrado nesse dia.</p>}
+      {data && data.meals.map((meal) => {
         const logs = data.logs.filter((l) => l.mealId === meal.id)
         if (logs.length === 0) return null
         return (
           <div key={meal.id} className="text-sm">
             <p className="text-zinc-400">{meal.name} · {round(sum(logs).kcal)} kcal</p>
-            <p className="text-zinc-500">{logs.map((l) => `${l.foodName} (${l.grams}g)`).join(', ')}</p>
+            <p className="text-zinc-500">{logs.map((l) => `${foodLabel(l.foodName)} (${l.grams}g)`).join(', ')}</p>
           </div>
         )
       })}

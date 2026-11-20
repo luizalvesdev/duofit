@@ -5,7 +5,7 @@ import { MacroBars } from '../../components/MacroBars'
 import { NumericInput } from '../../components/NumericInput'
 import { Button, ErrorText } from '../../components/ui'
 import { api } from '../../lib/api'
-import { forGrams, round, sum, type Food, type Meal, type PlanItem } from '../../lib/diet'
+import { foodLabel, forGrams, round, sum, type Food, type Meal, type PlanItem } from '../../lib/diet'
 import type { ProfileResponse } from '../../lib/types'
 import { Loading, useApi } from '../../lib/useApi'
 
@@ -82,7 +82,7 @@ export function PlanPage() {
           </div>
           {items.filter((i) => i.mealId === meal.id).map((item) => (
             <div key={item.key} className="flex items-center gap-2 border-b border-zinc-900 py-2 text-sm last:border-0">
-              <span className="flex-1">{item.food.name}</span>
+              <span className="flex-1">{foodLabel(item.food.name)}</span>
               <div className="w-20"><NumericInput decimal value={item.grams} onCommit={(g) => setItems((prev) => prev!.map((i) => (i.key === item.key ? { ...i, grams: g } : i)))} /></div>
               <span className="text-zinc-500">g</span>
               <button onClick={() => setItems((prev) => prev!.filter((i) => i.key !== item.key))} className="px-1 text-zinc-600">✕</button>

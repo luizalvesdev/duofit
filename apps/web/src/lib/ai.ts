@@ -31,6 +31,8 @@ export type Answers = Partial<{
   dietRestrictions: ('vegetarian' | 'vegan' | 'lactose_free' | 'gluten_free')[]
   allergies: string
   dislikedFoods: string
+  foodPreferences: string
+  supplements: string
   budget: 'low' | 'medium' | 'high'
   screening: { pregnantOrNursing: boolean; eatingDisorderHistory: boolean; relevantMedicalCondition: boolean; relevantMedication: boolean }
 }>
@@ -151,3 +153,7 @@ export type DietDraft = {
 
 export const AI_DIET_DRAFT_DISCLAIMER =
   'Rascunho gerado por IA. As calorias e os macros são calculados pelo app a partir da sua meta. Não substitui acompanhamento com nutricionista.'
+
+export type DuoDietDraft = {
+  members: ({ userId: string; name: string } & DietDraft)[]
+}

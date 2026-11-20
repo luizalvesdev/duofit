@@ -4,6 +4,7 @@ import { Page, PageTitle } from '../../components/AppLayout'
 import { AiConsent } from '../../components/AiConsent'
 import { Button, ErrorText } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
+import { foodLabel } from '../../lib/diet'
 import { AI_DIET_DISCLAIMER, aiErrorMessage, type AiProfile, type DietReview, type Insight } from '../../lib/ai'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 
@@ -86,8 +87,8 @@ function Review({ insight }: { insight: Insight<DietReview> }) {
             <input type="checkbox" checked={selected.has(i)} disabled={applied} onChange={() => toggle(i)} className="mt-1 h-5 w-5 shrink-0 accent-lime-400" />
             <span className="grid min-w-0 flex-1 gap-1">
               <span className="text-xs text-muted">{swap.meal}</span>
-              <span className="text-sm text-zinc-400 line-through">{swap.from.foodName} · {swap.from.grams} g</span>
-              <span className="font-semibold">{swap.to.foodName} · {swap.to.grams} g</span>
+              <span className="text-sm text-zinc-400 line-through">{foodLabel(swap.from.foodName)} · {swap.from.grams} g</span>
+              <span className="font-semibold">{foodLabel(swap.to.foodName)} · {swap.to.grams} g</span>
               <span className="text-sm text-zinc-400">{swap.reason}</span>
               <span className="num text-xs text-zinc-500">
                 {signed(swap.to.kcal - swap.from.kcal)} kcal · {signed(swap.to.proteinG - swap.from.proteinG, ' g')} P · {signed(swap.to.carbsG - swap.from.carbsG, ' g')} C · {signed(swap.to.fatG - swap.from.fatG, ' g')} G

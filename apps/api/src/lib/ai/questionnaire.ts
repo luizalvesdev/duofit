@@ -25,6 +25,8 @@ export const answersSchema = z
     dietRestrictions: z.array(z.enum(['vegetarian', 'vegan', 'lactose_free', 'gluten_free'])).max(4),
     allergies: z.string().max(300),
     dislikedFoods: z.string().max(300),
+    foodPreferences: z.string().max(300),
+    supplements: z.string().max(300),
     budget: z.enum(['low', 'medium', 'high']),
     screening: z.object({
       pregnantOrNursing: z.boolean(),

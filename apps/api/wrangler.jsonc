@@ -8,7 +8,10 @@
   // Keep the old *.workers.dev URL alive for installed PWAs and APKs.
   "workers_dev": true,
   "vars": {
-    "APP_URL": "https://duofit.luizalves.dev"
+    "APP_URL": "https://duofit.luizalves.dev",
+    // First-party models, used only when the ANTHROPIC_API_KEY secret is set (else falls back to Bedrock).
+    "AI_MODEL": "claude-haiku-5-5",
+    "AI_MODEL_STRONG": "claude-haiku-5-5"
   }
   // "compatibility_flags": [
   //   "nodejs_compat"

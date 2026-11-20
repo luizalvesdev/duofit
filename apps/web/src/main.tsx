@@ -10,6 +10,7 @@ import { DietPage } from './pages/diet/DietPage'
 import { MealsPage } from './pages/diet/MealsPage'
 import { PlanPage } from './pages/diet/PlanPage'
 import { DuoPage } from './pages/duo/DuoPage'
+import { DuoDietPage } from './pages/duo/DuoDietPage'
 import { DietDraftPage } from './pages/ai/DietDraftPage'
 import { DietReviewPage } from './pages/ai/DietReviewPage'
 import { QuestionnairePage } from './pages/ai/QuestionnairePage'
@@ -49,6 +50,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="/treinos" element={<WorkoutsPage />} />
               <Route path="/dieta" element={<DietPage />} />
               <Route path="/dupla" element={<DuoPage />} />
+              <Route path="/dupla/dieta" element={<DuoDietPage />} />
               <Route path="/progresso" element={<ProgressPage />}>
                 <Route index element={<HistoryTab />} />
                 <Route path="recordes" element={<RecordsTab />} />

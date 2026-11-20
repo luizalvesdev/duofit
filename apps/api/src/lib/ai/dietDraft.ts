@@ -16,7 +16,6 @@ type Profile = { sex: 'male' | 'female'; birthDate: string; heightCm: number; ac
 export type Macros = { kcal: number; proteinG: number; carbsG: number; fatG: number }
 const round1 = (n: number) => Math.round(n * 10) / 10
 const MAX_CANDIDATES = 150
-const KCAL_TOLERANCE = 0.05
 
 // How many candidates each TACO category contributes. The user's most-used foods always come first.
 const QUOTA: Record<string, number> = {
@@ -49,11 +48,57 @@ function excludedByRestrictions(f: { category: string | null; searchName: string
   return false
 }
 
-/** Words from free-text fields ("amendoim, frutos do mar") used to drop matching foods. */
-function bannedWords(answers: Answers) {
-  return searchable(`${answers.allergies ?? ''} ${answers.dislikedFoods ?? ''}`)
-    .split(' ')
-    .filter((w) => w.length >= 4)
+type FoodLike = { category: string | null; searchName: string }
+
+/**
+ * A keyword the person can type ("porco", "frutos do mar") that stands for a whole food group, so the ban reaches
+ * foods whose name never contains the typed word (pork is "pernil"/"lombo suíno", seafood is "merluza"/"abadejo").
+ * `key` is tested against what the person wrote; a match drops every food in `category` or whose name matches `name`.
+ */
+const GROUPS: { key: RegExp; category?: string; name?: RegExp }[] = [
+  { key: /fruto do mar|frutos do mar|marisco|camarao|lula|polvo|ostra|siri|caranguejo|mexilhao|lagosta|peixe|pescado/, category: 'Pescados e frutos do mar' },
+  { key: /\bovo\b|\bovos\b|clara de ovo|gema/, category: 'Ovos e derivados' },
+  { key: /\bleite\b|lactose|laticinio/, category: 'Leite e derivados', name: DAIRY_NAME },
+  { key: /porco|suin|bacon|pernil|toucinho|panceta|presunto|lombo canadense|tender/, name: /suin|porco|pernil|bacon|toucinho|panceta|presunto|tender/ },
+  { key: /frango|galinha|\bave\b/, name: /frango|galinha/ },
+  { key: /\bcarne|\bboi\b|bovin|\bvaca\b/, category: 'Carnes e derivados' },
+  { key: /amendoim/, name: /amendoim/ },
+  { key: /soja|tofu/, name: /soja|tofu/ },
+]
+
+// One thing the person won't eat: a food group or a literal word, optionally with an exception kept in ("frango
+// exceto peito de frango" bans chicken but keeps breast).
+type BanRule = { category?: string; name?: RegExp; token?: string; except?: RegExp }
+
+const EXCEPT = / exceto | excet | menos | so | somente /
+
+/** Parses a free-text field ("porco, frango exceto peito de frango") into ban rules, one per listed item. */
+function parseBans(text: string): BanRule[] {
+  const s = searchable(text)
+  if (!s) return []
+  const rules: BanRule[] = []
+  for (const clause of s.split(/,|;| e /).map((c) => c.trim()).filter(Boolean)) {
+    const [banPart, exceptPart] = clause.split(EXCEPT)
+    const banWords = new Set(banPart.split(' '))
+    // Drop words shared with the ban ("frango" in "peito de frango") so the exception stays specific (just "peito").
+    const exceptWords = (exceptPart ?? '').split(' ').filter((w) => w.length >= 3 && !banWords.has(w))
+    const except = exceptWords.length ? new RegExp(exceptWords.join('|')) : undefined
+    const group = GROUPS.find((g) => g.key.test(banPart))
+    if (group) rules.push({ category: group.category, name: group.name, except })
+    else for (const w of banPart.split(' ').filter((w) => w.length >= 3)) rules.push({ token: w, except })
+  }
+  return rules
+}
+
+const ruleHits = (f: FoodLike, r: BanRule) => {
+  const hit = (r.category && f.category === r.category) || (r.name && r.name.test(f.searchName)) || (r.token && f.searchName.split(' ').includes(r.token))
+  return !!hit && !(r.except && r.except.test(f.searchName))
+}
+
+/** Builds a reusable predicate `canEat(food)` for one person from their restrictions, allergies and dislikes. */
+export function eaterFilter(answers: Answers) {
+  const bans = [...parseBans(answers.allergies ?? ''), ...parseBans(answers.dislikedFoods ?? '')]
+  return (f: FoodLike) => !excludedByRestrictions(f, answers) && !bans.some((r) => ruleHits(f, r))
 }
 
 function score(f: { category: string | null; searchName: string; name: string }) {
@@ -80,10 +125,10 @@ async function latestWeight(db: Db, userId: string) {
  * there is none), clamped to the calorie floor, max deficit and protein range. The model only picks foods
  * and portions from a candidate list built in code.
  */
-export async function dietDraftContext(db: Db, userId: string, answers: Answers, profile: Profile) {
-  const [weightKg, goal, mealList] = await Promise.all([latestWeight(db, userId), currentGoal(db, userId), activeMeals(db, userId)])
-  if (!weightKg || !goal) throw new AiError('ai_profile_required', 422, 'Set a goal and log your weight first')
-
+/** The daily macro target for one person (their goal, or a Mifflin-St Jeor suggestion), clamped to safe bounds. */
+export async function targetFor(db: Db, userId: string, profile: Profile) {
+  const [weightKg, goal] = await Promise.all([latestWeight(db, userId), currentGoal(db, userId)])
+  if (!weightKg || !goal) return null
   const suggested = suggestTargets({
     sex: profile.sex,
     age: ageFrom(profile.birthDate),
@@ -92,20 +137,20 @@ export async function dietDraftContext(db: Db, userId: string, answers: Answers,
     activityLevel: profile.activityLevel,
     objective: goal.objective,
   })
-  const clamped = clampTargets({
-    sex: profile.sex,
-    weightKg,
-    tdee: suggested.tdee,
-    kcal: goal.kcal,
-    proteinG: goal.proteinG,
-    fatG: goal.fatG,
-  })
+  const clamped = clampTargets({ sex: profile.sex, weightKg, tdee: suggested.tdee, kcal: goal.kcal, proteinG: goal.proteinG, fatG: goal.fatG })
   const target: Macros = { kcal: clamped.kcal, proteinG: clamped.proteinG, carbsG: clamped.carbsG, fatG: clamped.fatG }
+  return { target, objective: goal.objective }
+}
+
+export async function dietDraftContext(db: Db, userId: string, answers: Answers, profile: Profile) {
+  const [computed, mealList] = await Promise.all([targetFor(db, userId, profile), activeMeals(db, userId)])
+  if (!computed) throw new AiError('ai_profile_required', 422, 'Set a goal and log your weight first')
+  const { target, objective } = computed
 
   const since = new Date(Date.now() - 90 * 86_400_000).toISOString().slice(0, 10)
   const [all, used] = await Promise.all([
     db
-      .select({ id: foods.id, name: foods.name, searchName: foods.searchName, category: foods.category, kcal: foods.kcal, protein: foods.protein, carbs: foods.carbs, fat: foods.fat })
+      .select({ id: foods.id, name: foods.name, searchName: foods.searchName, category: foods.category, ownerId: foods.ownerId, kcal: foods.kcal, protein: foods.protein, carbs: foods.carbs, fat: foods.fat })
       .from(foods)
       .where(or(isNull(foods.ownerId), eq(foods.ownerId, userId))),
     db
@@ -117,11 +162,13 @@ export async function dietDraftContext(db: Db, userId: string, answers: Answers,
       .limit(40),
   ])
 
-  const banned = bannedWords(answers)
-  const allowed = all.filter((f) => !excludedByRestrictions(f, answers) && !banned.some((w) => f.searchName.includes(w)))
+  const canEat = eaterFilter(answers)
+  const allowed = all.filter(canEat)
   const byId = new Map(allowed.map((f) => [f.id, f]))
 
   const picked = new Map<string, (typeof allowed)[number]>()
+  // The person's own custom foods (e.g. a specific whey they registered) are always candidates.
+  for (const f of allowed) if (f.ownerId) picked.set(f.id, f)
   for (const u of used) {
     const f = byId.get(u.foodId)
     if (f) picked.set(f.id, f)
@@ -139,12 +186,14 @@ export async function dietDraftContext(db: Db, userId: string, answers: Answers,
 
   const input = {
     target,
-    objective: goal.objective,
+    objective,
     meals: mealList.map((m) => m.name),
     mealsPerDay: answers.mealsPerDay ?? null,
     restrictions: answers.dietRestrictions ?? [],
     allergies: answers.allergies ?? '',
     dislikedFoods: answers.dislikedFoods ?? '',
+    preferences: answers.foodPreferences ?? '',
+    supplements: answers.supplements ?? '',
     budget: answers.budget ?? null,
     candidates: candidates.map((f, i) => ({ n: i + 1, name: f.name, category: f.category, kcal: f.kcal, protein: f.protein, carbs: f.carbs, fat: f.fat })),
   }
@@ -178,6 +227,51 @@ export type DietDraft = {
 }
 
 const clampGrams = (g: number) => Math.min(Math.max(Math.round(g / 5) * 5, 5), 1000)
+
+type FitFood = { kcal: number; protein: number; carbs: number; fat: number }
+const MACRO_KEYS = ['kcal', 'proteinG', 'carbsG', 'fatG'] as const
+// How hard each macro is pulled toward target. Protein and calories matter most.
+const MACRO_WEIGHT = { kcal: 1.5, proteinG: 2.5, carbsG: 1, fatG: 1 }
+
+/**
+ * Tunes each portion so the day hits all four macro targets at once (not just calories). Coordinate descent:
+ * each food's grams is set to the value that minimises the weighted relative error across kcal/protein/carb/fat,
+ * holding the others fixed, repeated until it settles. Bounded to 5-1000 g. Mutates `lines` in place.
+ */
+function fitPortions(lines: { food: FitFood; grams: number }[], target: Macros) {
+  if (lines.length === 0) return
+  const per = (f: FitFood) => ({ kcal: f.kcal / 100, proteinG: f.protein / 100, carbsG: f.carbs / 100, fatG: f.fat / 100 })
+  const a = lines.map((l) => per(l.food))
+  const tgt = { kcal: target.kcal || 1, proteinG: target.proteinG || 1, carbsG: target.carbsG || 1, fatG: target.fatG || 1 }
+
+  for (let sweep = 0; sweep < 60; sweep++) {
+    for (let i = 0; i < lines.length; i++) {
+      let A = 0
+      let B = 0
+      for (const m of MACRO_KEYS) {
+        let rest = 0
+        for (let j = 0; j < lines.length; j++) if (j !== i) rest += lines[j].grams * a[j][m]
+        const w = MACRO_WEIGHT[m] / (tgt[m] * tgt[m])
+        A += w * a[i][m] * a[i][m]
+        B += w * a[i][m] * (rest - tgt[m])
+      }
+      if (A > 0) lines[i].grams = Math.min(1000, Math.max(5, -B / A))
+    }
+  }
+  for (const l of lines) l.grams = clampGrams(l.grams)
+}
+
+const MACRO_TOL = 0.1
+/** Flags any macro (kcal/protein/carb/fat) that ended more than 10% off target after fitting. */
+export function macroWarnings(totals: Macros, target: Macros): string[] {
+  const w: string[] = []
+  const off = (got: number, want: number) => want > 0 && Math.abs(got / want - 1) > MACRO_TOL
+  if (off(totals.kcal, target.kcal)) w.push(`Calorias ficaram em ${Math.round(totals.kcal)} (meta ${target.kcal} kcal).`)
+  if (off(totals.proteinG, target.proteinG)) w.push(`Proteína ficou em ${Math.round(totals.proteinG)} g (meta ${target.proteinG} g).`)
+  if (off(totals.carbsG, target.carbsG)) w.push(`Carboidrato ficou em ${Math.round(totals.carbsG)} g (meta ${target.carbsG} g).`)
+  if (off(totals.fatG, target.fatG)) w.push(`Gordura ficou em ${Math.round(totals.fatG)} g (meta ${target.fatG} g).`)
+  return w
+}
 
 /**
  * Maps numeric ids to real foods, then scales every portion proportionally until total calories are within
@@ -218,21 +312,11 @@ export function buildDietDraft(ctx: Awaited<ReturnType<typeof dietDraftContext>>
     }
   }
 
-  for (let i = 0; i < 4; i++) {
-    const ratio = ctx.target.kcal / total().kcal
-    if (Math.abs(ratio - 1) <= KCAL_TOLERANCE) break
-    for (const m of meals) for (const l of m.lines) l.grams = clampGrams(l.grams * ratio)
-  }
+  fitPortions(meals.flatMap((m) => m.lines), ctx.target)
 
   const t = total()
   const totals: Macros = { kcal: Math.round(t.kcal), proteinG: round1(t.proteinG), carbsG: round1(t.carbsG), fatG: round1(t.fatG) }
-  const warnings: string[] = []
-  if (Math.abs(totals.kcal / ctx.target.kcal - 1) > KCAL_TOLERANCE) {
-    warnings.push(`Não foi possível chegar a 5% da meta de ${ctx.target.kcal} kcal. Ajuste as porções antes de usar.`)
-  }
-  if (totals.proteinG < ctx.target.proteinG * 0.9) {
-    warnings.push(`A proteína do rascunho (${totals.proteinG} g) ficou abaixo da meta (${ctx.target.proteinG} g).`)
-  }
+  const warnings = macroWarnings(totals, ctx.target)
 
   return {
     rationale: model.rationale,
@@ -255,4 +339,57 @@ export function buildDietDraft(ctx: Awaited<ReturnType<typeof dietDraftContext>>
     })),
     warnings,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Improve one meal: the user rewrites a single meal with a free-text instruction
+// ---------------------------------------------------------------------------
+
+export const improveMealSchema = z.object({
+  items: z.array(z.object({ n: z.number().int(), grams: z.number() })).max(10),
+})
+
+export type DraftItem = DietDraft['meals'][number]['items'][number]
+
+/** Maps one meal's model items (n, grams) to real foods with per-item macros. */
+export function mealItemsFromModel(ctx: Awaited<ReturnType<typeof dietDraftContext>>, items: { n: number; grams: number }[]): DraftItem[] {
+  const seen = new Set<number>()
+  const out: DraftItem[] = []
+  for (const it of items) {
+    const food = ctx.byN.get(it.n)
+    if (!food || seen.has(it.n) || !Number.isFinite(it.grams) || it.grams <= 0) continue
+    seen.add(it.n)
+    const g = clampGrams(it.grams)
+    out.push({
+      foodId: food.id,
+      foodName: food.name,
+      grams: g,
+      kcal: Math.round((food.kcal * g) / 100),
+      proteinG: round1((food.protein * g) / 100),
+      carbsG: round1((food.carbs * g) / 100),
+      fatG: round1((food.fat * g) / 100),
+    })
+  }
+  return out
+}
+
+/** Sums the macros of a list of items, to recompute a plan's totals after a meal is edited. */
+export function sumItems(items: DraftItem[]): Macros {
+  return {
+    kcal: items.reduce((s, i) => s + i.kcal, 0),
+    proteinG: round1(items.reduce((s, i) => s + i.proteinG, 0)),
+    carbsG: round1(items.reduce((s, i) => s + i.carbsG, 0)),
+    fatG: round1(items.reduce((s, i) => s + i.fatG, 0)),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Duo (couple) diet: one complete, balanced plan per person, shown side by side
+// ---------------------------------------------------------------------------
+
+export type DuoMember = { userId: string; name: string; answers: Answers; profile: Profile }
+
+/** Each member gets a full DietDraft (own meals, portions and totals), so each hits their own macros. */
+export type DuoDietDraft = {
+  members: ({ userId: string; name: string } & DietDraft)[]
 }
