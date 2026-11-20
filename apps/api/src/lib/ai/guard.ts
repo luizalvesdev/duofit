@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from 'drizzle-orm'
+import { and, eq, gte, ne, sql } from 'drizzle-orm'
 import type { createDb } from '../../db/client'
 import { aiInsights, aiProfiles } from '../../db/schema'
 import { ageFrom, type Sex } from '../targets'
@@ -8,6 +8,8 @@ import type { Answers } from './questionnaire'
 type Db = ReturnType<typeof createDb>
 
 export const DAILY_LIMIT = 10
+/** Chat turns are short and frequent, so they get their own, larger budget. */
+export const CHAT_DAILY_LIMIT = 30
 const MIN_AGE = 18
 const SAFETY_MESSAGE =
   'O DuoFit não consegue gerar essa análise para o seu caso. Procure um profissional de saúde (médico, nutricionista ou educador físico).'
@@ -45,13 +47,24 @@ export function clampTargets({ sex, weightKg, tdee, kcal, proteinG, fatG }: Targ
   return { kcal: clampedKcal, proteinG: clampedProtein, fatG, carbsG }
 }
 
-/** Counts generations in the last 24h. Cache hits create no row, so they never count. */
-export async function rateLimit(db: Db, userId: string, limit = DAILY_LIMIT) {
+/**
+ * Counts generations in the last 24h. Chat turns and the other kinds have separate budgets.
+ * Cache hits create no row, so they never count.
+ */
+export async function rateLimit(db: Db, userId: string, kind: string) {
+  const chat = kind === 'workout_chat'
+  const limit = chat ? CHAT_DAILY_LIMIT : DAILY_LIMIT
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(aiInsights)
-    .where(and(eq(aiInsights.userId, userId), gte(aiInsights.createdAt, since)))
+    .where(
+      and(
+        eq(aiInsights.userId, userId),
+        gte(aiInsights.createdAt, since),
+        chat ? eq(aiInsights.kind, 'workout_chat') : ne(aiInsights.kind, 'workout_chat'),
+      ),
+    )
   if ((row?.n ?? 0) >= limit) throw new AiError('ai_rate_limited', 429, `Daily limit of ${limit} AI requests reached`)
 }
 

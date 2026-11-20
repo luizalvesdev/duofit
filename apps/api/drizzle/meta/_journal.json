@@ -64,6 +64,13 @@
       "when": 1795010662804,
       "tag": "0008_ai",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795184384658,
+      "tag": "0009_naive_iceman",
+      "breakpoints": true
     }
   ]
 }

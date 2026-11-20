@@ -110,11 +110,63 @@ export type WorkoutDraft = {
   discarded: number
 }
 
+// Monday first, Sunday last: free days are handed out in this order.
+const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0]
+
+/**
+ * Gives every unlocked template without a weekday one fixed day, in place. It takes a free day while the week
+ * still has room for `daysPerWeek` training days, otherwise one day from the template with the most days.
+ * Locked templates (ones the user already has and the change does not touch) keep their days.
+ */
+export function fillMissingDays(templates: { weekdays: number[]; locked?: boolean }[], daysPerWeek: number) {
+  const used = new Set(templates.flatMap((t) => t.weekdays))
+  for (const t of templates) {
+    if (t.locked || t.weekdays.length) continue
+    const free = DAY_ORDER.find((d) => !used.has(d))
+    if (free !== undefined && used.size < daysPerWeek) {
+      t.weekdays = [free]
+      used.add(free)
+      continue
+    }
+    const donor = templates
+      .filter((o) => !o.locked && o.weekdays.length > 1)
+      .sort((a, b) => b.weekdays.length - a.weekdays.length)[0]
+    if (donor) t.weekdays = [donor.weekdays.pop()!]
+  }
+}
+
 const clamp = (n: number, min: number, max: number) => Math.min(Math.max(Math.round(n), min), max)
+
+type DraftItem = WorkoutDraft['templates'][number]['items'][number]
+type CatalogEntry = { id: string; name: string; muscle: string }
+
+/** Maps numbered exercises to real ones with the template editor's limits. Unknown and repeated numbers are dropped. */
+export function mapItems(byN: Map<number, CatalogEntry>, exercises: ModelDraft['templates'][number]['exercises']) {
+  const seen = new Set<number>()
+  const items: DraftItem[] = []
+  for (const e of exercises) {
+    const ex = byN.get(e.n)
+    if (!ex || seen.has(e.n)) continue
+    seen.add(e.n)
+    const repMin = clamp(e.repMin, 1, 100)
+    items.push({
+      exerciseId: ex.id,
+      exerciseName: ex.name,
+      muscle: ex.muscle,
+      targetSets: clamp(e.sets, 1, 10),
+      repMin,
+      repMax: Math.max(repMin, clamp(e.repMax, 1, 100)),
+      restSeconds: clamp(e.restSeconds, 0, 600),
+      notes: e.notes?.trim() || null,
+    })
+  }
+  return items
+}
 
 /**
  * Maps the model's numeric ids back to real exercises and enforces the same limits as the template editor.
- * Weekdays are unique across templates and capped at the days the person said they can train.
+ * Weekdays are unique across templates and capped at the days the person said they can train, and every
+ * template ends up with at least one fixed day.
  */
 export function buildWorkoutDraft(
   ctx: Awaited<ReturnType<typeof workoutDraftContext>>,
@@ -127,24 +179,7 @@ export function buildWorkoutDraft(
 
   for (const t of model.templates) {
     proposed += t.exercises.length
-    const seen = new Set<number>()
-    const items: WorkoutDraft['templates'][number]['items'] = []
-    for (const e of t.exercises) {
-      const ex = ctx.byN.get(e.n)
-      if (!ex || seen.has(e.n)) continue
-      seen.add(e.n)
-      const repMin = clamp(e.repMin, 1, 100)
-      items.push({
-        exerciseId: ex.id,
-        exerciseName: ex.name,
-        muscle: ex.muscle,
-        targetSets: clamp(e.sets, 1, 10),
-        repMin,
-        repMax: Math.max(repMin, clamp(e.repMax, 1, 100)),
-        restSeconds: clamp(e.restSeconds, 0, 600),
-        notes: e.notes?.trim() || null,
-      })
-    }
+    const items = mapItems(ctx.byN, t.exercises)
     if (items.length === 0) continue
 
     const weekdays = [...new Set(t.weekdays)]
@@ -156,6 +191,7 @@ export function buildWorkoutDraft(
   }
 
   if (templates.length === 0) throw new AiError('ai_invalid_output', 502, 'The draft had no usable exercises')
+  fillMissingDays(templates, daysPerWeek)
   const kept = templates.reduce((s, t) => s + t.items.length, 0)
   return { rationale: model.rationale, split: model.split, templates, discarded: proposed - kept }
 }

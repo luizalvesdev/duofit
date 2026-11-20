@@ -1,12 +1,13 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm'
 import type { createDb } from '../../db/client'
-import { aiInsights, foods, mealPlanItems, meals } from '../../db/schema'
+import { aiInsights, foods, mealPlanItems, meals, workoutTemplates } from '../../db/schema'
 import { searchable } from '../search'
 import { activeMeals, MAX_MEALS } from '../../routes/diet'
 import type { DietDraft } from './dietDraft'
 import type { DietReview } from './diet'
 import { allExercisesVisible } from '../access'
-import { createTemplate, type TemplateInput } from '../templates'
+import { createTemplate, saveItems, type TemplateInput } from '../templates'
+import type { WorkoutChat } from './workoutChat'
 import { HttpError } from './errors'
 
 type Db = ReturnType<typeof createDb>
@@ -95,4 +96,46 @@ export async function applyDietDraft(db: Db, userId: string, insight: Insight) {
   ]
   await db.batch([first, ...rest])
   return { applied: rows.length, createdMeals: created.length }
+}
+
+/**
+ * Applies a change the AI proposed in the workout chat: updates the touched templates, creates the new ones and
+ * archives the removed ones. Fails with `plan_changed` when a referenced template was deleted in the meantime.
+ */
+export async function applyWorkoutChat(db: Db, userId: string, insight: Insight) {
+  const proposal = (insight.output as WorkoutChat).proposal
+  if (!proposal) throw new HttpError(400, 'not_applicable')
+
+  const ids = [...proposal.changes.flatMap((c) => (c.templateId ? [c.templateId] : [])), ...proposal.remove.map((r) => r.templateId)]
+  if (ids.length) {
+    const found = await db
+      .select({ id: workoutTemplates.id })
+      .from(workoutTemplates)
+      .where(and(eq(workoutTemplates.userId, userId), isNull(workoutTemplates.archivedAt), inArray(workoutTemplates.id, ids)))
+    if (found.length !== new Set(ids).size) throw new HttpError(409, 'plan_changed')
+  }
+  if (!(await allExercisesVisible(db, userId, proposal.changes.flatMap((c) => c.items.map((i) => i.exerciseId))))) {
+    throw new HttpError(400, 'unknown_exercise')
+  }
+
+  for (const c of proposal.changes) {
+    const items = c.items.map(({ exerciseId, targetSets, repMin, repMax, restSeconds, notes }) => ({ exerciseId, targetSets, repMin, repMax, restSeconds, notes }))
+    if (!c.templateId) {
+      await createTemplate(db, userId, { name: c.name, weekdays: c.weekdays, items })
+      continue
+    }
+    await db
+      .update(workoutTemplates)
+      .set({ name: c.name, weekdays: c.weekdays, updatedAt: new Date() })
+      .where(and(eq(workoutTemplates.id, c.templateId), eq(workoutTemplates.userId, userId)))
+    await saveItems(db, c.templateId, items)
+  }
+  if (proposal.remove.length) {
+    await db
+      .update(workoutTemplates)
+      .set({ archivedAt: new Date() })
+      .where(and(eq(workoutTemplates.userId, userId), inArray(workoutTemplates.id, proposal.remove.map((r) => r.templateId))))
+  }
+  await markApplied(db, insight.id)
+  return { applied: proposal.changes.length, removed: proposal.remove.length }
 }

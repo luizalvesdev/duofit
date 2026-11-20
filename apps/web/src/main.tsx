@@ -14,6 +14,7 @@ import { DietDraftPage } from './pages/ai/DietDraftPage'
 import { DietReviewPage } from './pages/ai/DietReviewPage'
 import { QuestionnairePage } from './pages/ai/QuestionnairePage'
 import { WeekReviewPage } from './pages/ai/WeekReviewPage'
+import { WorkoutChatPage } from './pages/ai/WorkoutChatPage'
 import { WorkoutDraftPage } from './pages/ai/WorkoutDraftPage'
 import { MemberExercisePage, MemberRecordsPage, MemberSessionPage } from './pages/duo/MemberRoutes'
 import { MemberPage } from './pages/duo/MemberPage'
@@ -67,6 +68,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/ia/dieta/montar" element={<DietDraftPage />} />
             <Route path="/ia/questionario" element={<QuestionnairePage />} />
             <Route path="/ia/treino" element={<WorkoutDraftPage />} />
+            <Route path="/ia/treino/conversa" element={<WorkoutChatPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/treinos/nova" element={<TemplateEditorPage />} />
             <Route path="/treinos/:id" element={<TemplateEditorPage />} />

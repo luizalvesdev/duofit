@@ -39,7 +39,7 @@ export async function cachedInsight<T>(
   const cached = await find()
   if (cached) return { insight: cached, cached: true as const }
 
-  await rateLimit(db, userId)
+  await rateLimit(db, userId, kind)
   const result = await opts.generate()
   console.log(`ai ${kind}`, JSON.stringify({ model: result.model, usage: result.usage }))
 

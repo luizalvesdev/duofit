@@ -60,6 +60,17 @@ export type WorkoutDraft = {
   discarded: number
 }
 
+export type WorkoutChatItem = WorkoutDraft['templates'][number]['items'][number]
+
+export type WorkoutChat = {
+  reply: string
+  proposal: {
+    summary: string
+    changes: { templateId: string | null; name: string; weekdays: number[]; items: WorkoutChatItem[] }[]
+    remove: { templateId: string; name: string }[]
+  } | null
+}
+
 export const AI_WORKOUT_DISCLAIMER =
   'Rascunho gerado por IA a partir das suas respostas. Não substitui um personal trainer. Ajuste a carga com cuidado e pare se sentir dor.'
 

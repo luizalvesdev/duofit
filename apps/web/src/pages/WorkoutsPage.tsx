@@ -27,7 +27,8 @@ export function WorkoutsPage() {
     <main className="mx-auto grid max-w-md gap-5 px-4 py-6 sm:px-6 lg:max-w-3xl lg:px-12 lg:py-10">
       <header className="flex items-center justify-between">
         <h1 className="num text-4xl leading-none font-bold uppercase lg:text-5xl">Treinos</h1>
-        <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 text-sm">
+          {templates.length > 0 && <Link to="/ia/treino/conversa" className="text-zinc-300">Questionar a IA</Link>}
           <Link to="/ia/treino" className="text-zinc-300">Montar com IA</Link>
           <Link to="/treinos/nova" className="text-lime-400">+ Nova ficha</Link>
         </div>

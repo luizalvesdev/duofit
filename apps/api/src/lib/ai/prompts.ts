@@ -20,7 +20,7 @@ export const systemFor = (taskBlock: string) => `${BASE_SYSTEM}\n\n${taskBlock}`
 export const PING_TASK = `Tarefa: teste de conexão. Responda com ok=true e uma frase curta em "message" confirmando que recebeu os dados.`
 
 /** Bump when a prompt or its output schema changes, so cached insights are regenerated. */
-export const PROMPT_VERSION = 1
+export const PROMPT_VERSION = 2
 
 export const WEEK_TASK = `Tarefa: analisar a semana de treino e dieta da pessoa e dizer o que melhorar e o que fazer na próxima semana. Não é um relatório formal: é uma análise sob medida e acionável.
 
@@ -68,6 +68,7 @@ Entrada (JSON): "level" (beginner, intermediate ou advanced), "daysPerWeek", "mi
 Regras:
 - Use somente exercícios do "catalog" e referencie-os pelo número "n". Nunca invente exercícios nem números. O catálogo já exclui equipamentos que a pessoa não tem e regiões lesionadas; respeite também "injuryNotes".
 - Monte exatamente "daysPerWeek" dias de treino (ou menos, se fizer sentido), agrupados em fichas ("templates"). Escolha a divisão pelo nível e pelos dias: 2 a 3 dias costuma ser corpo inteiro ou superior/inferior; 4 dias, superior/inferior ou ABCD; 5 a 6 dias, push/pull/legs ou similar.
+- Toda ficha tem dia fixo: "weekdays" nunca fica vazio, um dia não aparece em duas fichas e a soma dos dias de todas as fichas é "daysPerWeek". Faça no máximo "daysPerWeek" fichas. Se usar variações do mesmo treino (ex.: "Push A" e "Push B"), cada variação ganha os próprios dias, em vez de a ficha A ocupar dois dias.
 - "weekdays" usa 0 para domingo até 6 para sábado. Distribua com dias de descanso entre treinos do mesmo grupo e não repita um dia em duas fichas.
 - Quantidade de exercícios por ficha proporcional à duração: em média 1 exercício a cada 8 a 10 minutos de "minutesPerSession". Priorize exercícios compostos primeiro e dê um pouco mais de volume aos "focusMuscles".
 - Iniciantes: menos volume, exercícios mais simples (máquinas, halteres), 2 a 3 séries. Intermediários e avançados: 3 a 4 séries nos principais.
@@ -95,3 +96,20 @@ Regras:
 Formato:
 - "rationale": 2 a 3 frases explicando as escolhas.
 - "meals": lista de refeições, cada uma com "name" e "items" (n, grams).`
+
+export const WORKOUT_CHAT_TASK = `Tarefa: conversar com a pessoa sobre o treino atual dela. Ela pode tirar dúvidas, questionar escolhas ou pedir ajustes. Quando fizer sentido mudar o treino, você propõe a mudança e a pessoa decide se aplica.
+
+Entrada (JSON): o perfil de treino ("level", "daysPerWeek", "minutesPerSession", "cardio", "objective", "focusMuscles", "injuredRegions", "injuryNotes", "equipment"), "catalog" (exercícios disponíveis, cada um com um número "n"), "currentBests" (melhores marcas por "n"), "workout" (as fichas atuais, cada uma com número "t", "name", "weekdays" de 0 = domingo a 6 = sábado e "exercises") e "conversation" (as mensagens até agora; responda à última mensagem da pessoa).
+
+Como responder:
+- "reply": a resposta em texto, curta e direta (até uns 6 parágrafos curtos), citando exercícios pelo nome, nunca pelo número. Explique o porquê das escolhas do treino quando perguntarem. Se a pessoa estiver certa, concorde; se a ideia dela não for boa, diga com respeito e explique.
+- "proposal": null quando não há mudança a fazer (dúvida, explicação, ou a pessoa ainda não decidiu). Só proponha mudança quando a pessoa pedir ou quando a crítica dela justificar um ajuste. Não aplique nada sozinho: a proposta é uma sugestão que a pessoa vai revisar.
+- Se a pessoa pedir algo fora do escopo (dor, lesão, doença, dieta detalhada, suplementos), não proponha mudança e recomende um profissional quando for o caso.
+
+Proposta ("proposal"):
+- "summary": uma frase dizendo o que muda.
+- "templates": só as fichas que mudam ou que são novas. Para alterar uma ficha existente use o "t" dela; para criar uma nova use "t": null. Cada ficha vem completa, com todos os exercícios que ela deve ter depois da mudança (não só os alterados).
+- "removeTemplates": números "t" das fichas a remover (lista vazia se nenhuma).
+- Use somente exercícios do "catalog", pelo número "n". Nunca invente exercícios nem números.
+- Toda ficha tem dia fixo: "weekdays" nunca fica vazio e um dia não aparece em duas fichas, contando as fichas que você não alterou. O total de dias de treino da semana deve ser "daysPerWeek".
+- "sets" de 1 a 10, "repMin" e "repMax" coerentes com o objetivo, "restSeconds" de 45 a 180. "notes" com no máximo uma dica curta, ou null.`

@@ -210,7 +210,7 @@ export const passwordResets = pgTable('password_resets', {
   createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
 }, (t) => [index().on(t.userId)])
 
-export const aiKindEnum = pgEnum('ai_kind', ['week_review', 'diet_review', 'workout_draft', 'diet_draft'])
+export const aiKindEnum = pgEnum('ai_kind', ['week_review', 'diet_review', 'workout_draft', 'diet_draft', 'workout_chat'])
 export const aiStatusEnum = pgEnum('ai_status', ['ready', 'applied', 'dismissed'])
 
 // One row per user: the questionnaire answers and the LGPD consent to send metrics to the model.

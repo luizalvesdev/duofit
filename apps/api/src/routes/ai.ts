@@ -6,13 +6,14 @@ import { createDb } from '../db/client'
 import { aiInsights, aiKindEnum, aiProfiles } from '../db/schema'
 import type { AppEnv } from '../env'
 import { generateStructured } from '../lib/ai/client'
-import { applyDietDraft, applyDietReview, applyWorkoutDraft } from '../lib/ai/apply'
+import { applyDietDraft, applyDietReview, applyWorkoutChat, applyWorkoutDraft } from '../lib/ai/apply'
 import { AiError, HttpError } from '../lib/ai/errors'
 import { weekContext } from '../lib/ai/context'
 import { buildDietReview, dietPlanContext, dietReviewModelSchema } from '../lib/ai/diet'
 import { buildDietDraft, dietDraftContext, dietDraftModelSchema } from '../lib/ai/dietDraft'
 import { hashInput } from '../lib/ai/guard'
-import { DIET_DRAFT_TASK, DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK, WORKOUT_TASK } from '../lib/ai/prompts'
+import { DIET_DRAFT_TASK, DIET_TASK, PING_TASK, PROMPT_VERSION, systemFor, WEEK_TASK, WORKOUT_CHAT_TASK, WORKOUT_TASK } from '../lib/ai/prompts'
+import { buildWorkoutChat, chatMessageSchema, workoutChatContext, workoutChatModelSchema } from '../lib/ai/workoutChat'
 import { answersSchema } from '../lib/ai/questionnaire'
 import { cachedInsight, guardedUser } from '../lib/ai/run'
 import { weekReviewSchema } from '../lib/ai/schemas'
@@ -140,6 +141,7 @@ export const aiRoutes = new Hono<AppEnv>()
       const body = c.req.valid('json')
       if (insight.kind === 'diet_review') return c.json(await applyDietReview(db, userId, insight, body.swapIndexes ?? []))
       if (insight.kind === 'workout_draft') return c.json(await applyWorkoutDraft(db, userId, insight, body.templates ?? []))
+      if (insight.kind === 'workout_chat') return c.json(await applyWorkoutChat(db, userId, insight))
       if (insight.kind === 'diet_draft') {
         // Replacing the plan is destructive, so the client must say it knows.
         if (body.replacePlan !== true) return c.json({ error: 'confirmation_required' }, 400)
@@ -203,6 +205,46 @@ export const aiRoutes = new Hono<AppEnv>()
     })
     return c.json({ status: 'ok' as const, cached, insight })
   })
+  .post(
+    '/workout-chat',
+    zValidator(
+      'json',
+      z.object({
+        messages: z
+          .array(chatMessageSchema)
+          .min(1)
+          .max(20)
+          .refine((m) => m.at(-1)?.role === 'user', { message: 'last message must be from the user' }),
+      }),
+    ),
+    async (c) => {
+      const db = createDb(c.env.DATABASE_URL)
+      const userId = c.get('userId')
+      const { answers } = await guardedUser(db, userId)
+      if (missingWorkoutAnswers(answers).length) {
+        throw new AiError('ai_questionnaire_incomplete', 422, 'Answer the questionnaire before chatting about the workout')
+      }
+
+      const ctx = await workoutChatContext(db, userId, answers, c.req.valid('json').messages)
+      const { insight, cached } = await cachedInsight(db, {
+        userId,
+        kind: 'workout_chat',
+        inputHash: await hashInput({ v: PROMPT_VERSION, input: ctx.input }),
+        generate: async () => {
+          const result = await generateStructured({
+            env: c.env,
+            system: systemFor(WORKOUT_CHAT_TASK),
+            input: ctx.input,
+            schema: workoutChatModelSchema,
+            maxTokens: 5000,
+            effort: 'low',
+          })
+          return { ...result, data: buildWorkoutChat(ctx, result.data) }
+        },
+      })
+      return c.json({ cached, insight })
+    },
+  )
   .post('/drafts/diet', async (c) => {
     const db = createDb(c.env.DATABASE_URL)
     const userId = c.get('userId')
