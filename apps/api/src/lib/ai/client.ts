@@ -1,9 +1,16 @@
-import { AnthropicBedrockMantle } from '@anthropic-ai/bedrock-sdk'
+import { AnthropicBedrock } from '@anthropic-ai/bedrock-sdk'
 import { type ZodType, z } from 'zod'
 import type { Bindings } from '../../env'
 import { AiError } from './errors'
 
-export const DEFAULT_MODEL = 'anthropic.claude-haiku-5-5'
+// Claude Haiku 5.5 is gated on this AWS account, and the bedrock-mantle endpoint rejects Claude
+// models for it, so the app calls Haiku 4.5 through bedrock-runtime (global inference profile).
+// To move to a newer model, set BEDROCK_MODEL_ID. Note that @anthropic-ai/bedrock-sdk is pinned to
+// 0.x: 1.x sends an API version that Bedrock accepts only for Claude 4.7 and later.
+export const DEFAULT_MODEL = 'global.anthropic.claude-haiku-4-5-20251001-v1:0'
+
+// Haiku 4.5 rejects the effort parameter.
+const supportsEffort = (model: string) => !model.includes('claude-haiku-4-5')
 
 export type Effort = 'low' | 'medium' | 'high'
 
@@ -11,10 +18,10 @@ export function createAi(env: Bindings) {
   if (!env.AWS_ACCESS_KEY_ID || !env.AWS_SECRET_ACCESS_KEY || !env.AWS_REGION) {
     throw new AiError('ai_not_configured', 500, 'AWS credentials or region are missing')
   }
-  return new AnthropicBedrockMantle({
+  return new AnthropicBedrock({
     awsRegion: env.AWS_REGION,
     awsAccessKey: env.AWS_ACCESS_KEY_ID,
-    awsSecretAccessKey: env.AWS_SECRET_ACCESS_KEY,
+    awsSecretKey: env.AWS_SECRET_ACCESS_KEY,
   })
 }
 
@@ -51,6 +58,8 @@ export async function generateStructured<T>({
   const model = env.BEDROCK_MODEL_ID ?? DEFAULT_MODEL
   const jsonSchema = toOutputSchema(schema)
   const usage = { inputTokens: 0, outputTokens: 0 }
+  const format = { type: 'json_schema' as const, schema: jsonSchema }
+  const outputConfig = supportsEffort(model) ? { effort, format } : { format }
 
   for (let attempt = 0; attempt < 2; attempt++) {
     let response: Awaited<ReturnType<typeof client.messages.create>>
@@ -60,7 +69,7 @@ export async function generateStructured<T>({
         max_tokens: maxTokens,
         system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: JSON.stringify(input) }],
-        output_config: { effort, format: { type: 'json_schema', schema: jsonSchema } },
+        output_config: outputConfig,
       })
     } catch (e) {
       throw mapSdkError(e)

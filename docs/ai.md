@@ -1,5 +1,7 @@
 # IA assistente no DuoFit (Claude Haiku via Amazon Bedrock)
 
+> **Estado em 2026-11-20:** em uso o Claude Haiku 4.5 via `bedrock-runtime` (cliente `AnthropicBedrock`, modelo `global.anthropic.claude-haiku-4-5-20251001-v1:0`, região `sa-east-1`). O Haiku 5.5 é restrito nesta conta AWS ("not available for this account") e o endpoint Mantle recusa modelos Claude para ela. Usuário IAM `duofit-bedrock` com policy só para `bedrock:InvokeModel` e `bedrock:InvokeModelWithResponseStream` em modelos/profiles `anthropic.claude-haiku-*`. `@anthropic-ai/bedrock-sdk` fixado em 0.x (a 1.x manda uma versão de API que o Bedrock só aceita para Claude 4.7+). O Haiku 4.5 não aceita `effort`, então o client omite esse campo para ele. O texto abaixo é o plano original.
+
 ## Context
 
 O DuoFit já registra treinos, séries, recordes, diário alimentar, plano de dieta, metas e peso. A ideia é adicionar uma IA que **auxilia** (não substitui personal/nutricionista):
