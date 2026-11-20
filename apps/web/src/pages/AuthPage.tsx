@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
-import { Button, ErrorText, Field, Input } from '../components/ui'
+import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui'
 import { ApiError } from '../lib/api'
 
 const errorMessages: Record<string, string> = {
@@ -58,9 +58,8 @@ export function AuthPage({ mode }: { mode: 'login' | 'register' }) {
           <Input name="email" type="email" required autoComplete="email" />
         </Field>
         <Field label="Senha" hint={isRegister ? 'Mínimo de 8 caracteres' : undefined}>
-          <Input
+          <PasswordInput
             name="password"
-            type="password"
             required
             minLength={isRegister ? 8 : undefined}
             autoComplete={isRegister ? 'new-password' : 'current-password'}

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useAuth } from '../auth/AuthContext'
-import { Button, ErrorText, Field, Input } from '../components/ui'
+import { Button, ErrorText, Field, Input, PasswordInput } from '../components/ui'
 import { api, ApiError } from '../lib/api'
 
 function AuthShell({ subtitle, children }: { subtitle: string; children: React.ReactNode }) {
@@ -115,10 +115,10 @@ export function ResetPasswordPage() {
     <AuthShell subtitle="Crie uma nova senha">
       <form onSubmit={handleSubmit} className="grid gap-4">
         <Field label="Nova senha" hint="Mínimo de 8 caracteres">
-          <Input name="password" type="password" required minLength={8} autoComplete="new-password" autoFocus />
+          <PasswordInput name="password" required minLength={8} autoComplete="new-password" autoFocus />
         </Field>
         <Field label="Repita a nova senha">
-          <Input name="confirm" type="password" required minLength={8} autoComplete="new-password" />
+          <PasswordInput name="confirm" required minLength={8} autoComplete="new-password" />
         </Field>
         <ErrorText>{error}</ErrorText>
         <Button type="submit" disabled={submitting}>{submitting ? 'Salvando…' : 'Salvar e entrar'}</Button>

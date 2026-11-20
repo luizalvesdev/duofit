@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+import { useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from 'react'
+import { Icon } from './Icon'
 
 export function Field({ label, children, hint }: { label: string; children: ReactNode; hint?: string }) {
   return (
@@ -14,6 +15,25 @@ const control =
   'w-full min-w-0 h-12 rounded-xl bg-surface-2 border border-line-strong px-3.5 text-zinc-50 outline-none focus:border-lime-400 focus:ring-4 focus:ring-lime-400/15 transition'
 
 export const Input = (props: InputHTMLAttributes<HTMLInputElement>) => <input {...props} className={control} />
+
+/** Password field with a toggle to show what was typed. */
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <div className="relative">
+      <input {...props} type={visible ? 'text' : 'password'} className={`${control} pr-12`} />
+      <button
+        type="button"
+        onClick={() => setVisible((v) => !v)}
+        aria-label={visible ? 'Ocultar senha' : 'Mostrar senha'}
+        aria-pressed={visible}
+        className="absolute inset-y-0 right-0 grid w-12 place-items-center text-zinc-400 hover:text-zinc-200"
+      >
+        <Icon name={visible ? 'eyeOff' : 'eye'} size={20} />
+      </button>
+    </div>
+  )
+}
 
 export const Select = (props: SelectHTMLAttributes<HTMLSelectElement>) => <select {...props} className={control} />
 
