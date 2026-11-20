@@ -182,10 +182,10 @@ export function buildWorkoutDraft(
     const items = mapItems(ctx.byN, t.exercises)
     if (items.length === 0) continue
 
-    const weekdays = [...new Set(t.weekdays)]
-      .filter((d) => d >= 0 && d <= 6 && !usedDays.has(d))
-      .sort((a, b) => a - b)
-      .slice(0, Math.max(0, daysPerWeek - usedDays.size))
+    // Fichas take weekdays in order, Monday first: 1st ficha Monday, 2nd Tuesday, 3rd Wednesday… The model's
+    // own weekday guesses are ignored so the sequence is always predictable, capped at the days they can train.
+    const day = DAY_ORDER[usedDays.size]
+    const weekdays = day !== undefined && usedDays.size < daysPerWeek ? [day] : []
     weekdays.forEach((d) => usedDays.add(d))
     templates.push({ name: t.name.trim() || `Treino ${templates.length + 1}`, weekdays, items })
   }

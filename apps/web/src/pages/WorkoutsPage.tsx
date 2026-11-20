@@ -19,8 +19,12 @@ export function WorkoutsPage() {
     navigate('/treino')
   }
 
+  // Order by weekday, Monday first (Seg, Ter, Qua… Dom), so the list follows the training week. Changing a
+  // ficha's day re-sorts it into place. Fichas without a fixed day sink to the end, then break ties by name.
+  const weekRank = (weekdays: number[]) =>
+    weekdays.length ? Math.min(...weekdays.map((d) => (d + 6) % 7)) : Infinity
   const sorted = [...templates].sort(
-    (a, b) => Number(b.weekdays.includes(today)) - Number(a.weekdays.includes(today)) || a.name.localeCompare(b.name),
+    (a, b) => weekRank(a.weekdays) - weekRank(b.weekdays) || a.name.localeCompare(b.name),
   )
 
   return (
