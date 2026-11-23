@@ -8,32 +8,67 @@ const native = Capacitor.isNativePlatform()
 
 let channelReady: Promise<unknown> | null = null
 
-function setupNative() {
-  channelReady ??= (async () => {
-    await LocalNotifications.createChannel({
-      id: CHANNEL_ID,
-      name: 'Fim do descanso',
-      description: 'Avisa quando o descanso entre séries termina',
-      importance: 5,
-      vibration: true,
-      visibility: 1,
-    })
-    const { display } = await LocalNotifications.checkPermissions()
-    if (display !== 'granted') await LocalNotifications.requestPermissions()
-  })().catch(() => {})
+function ensureChannel() {
+  channelReady ??= LocalNotifications.createChannel({
+    id: CHANNEL_ID,
+    name: 'Fim do descanso',
+    description: 'Avisa quando o descanso entre séries termina',
+    importance: 5,
+    vibration: true,
+    visibility: 1,
+  }).catch((e) => console.error('rest alert channel', e))
   return channelReady
 }
 
-// Call from a user gesture (e.g. starting a workout) so the permission prompt and audio unlock work.
-export function prepareRestAlert() {
-  if (native) void setupNative()
+export type RestAlertStatus = { notifications: boolean; exact: boolean }
+
+// null on web/PWA, where there is no OS-level alarm to set up.
+export async function getRestAlertStatus(): Promise<RestAlertStatus | null> {
+  if (!native) return null
+  try {
+    const [{ display }, { exact_alarm }] = await Promise.all([
+      LocalNotifications.checkPermissions(),
+      LocalNotifications.checkExactNotificationSetting(),
+    ])
+    return { notifications: display === 'granted', exact: exact_alarm === 'granted' }
+  } catch (e) {
+    console.error('rest alert status', e)
+    return null
+  }
+}
+
+// Asks for everything the alarm needs: notification permission, then (Android 12+) the
+// "Alarms & reminders" switch, which opens a system settings screen. Call from a tap.
+export async function enableRestAlert() {
+  if (!native) return null
+  await ensureChannel()
+  try {
+    await LocalNotifications.requestPermissions()
+    const { exact_alarm } = await LocalNotifications.checkExactNotificationSetting()
+    if (exact_alarm !== 'granted') await LocalNotifications.changeExactNotificationSetting()
+  } catch (e) {
+    console.error('rest alert enable', e)
+  }
+  return getRestAlertStatus()
+}
+
+// Quiet startup: create the channel and show the notification permission prompt if it never was.
+export async function prepareRestAlert() {
+  if (!native) return
+  await ensureChannel()
+  try {
+    const { display } = await LocalNotifications.checkPermissions()
+    if (display === 'prompt' || display === 'prompt-with-rationale') await LocalNotifications.requestPermissions()
+  } catch (e) {
+    console.error('rest alert prepare', e)
+  }
 }
 
 // Schedules an OS-level alarm: it fires with the screen off or the app in the background,
 // where JS timers are throttled or frozen.
 export async function scheduleRestAlert(endsAt: number) {
   if (!native) return
-  await setupNative()
+  await ensureChannel()
   await LocalNotifications.cancel({ notifications: [{ id: NOTIFICATION_ID }] }).catch(() => {})
   if (endsAt <= Date.now()) return
   await LocalNotifications.schedule({

@@ -27,7 +27,7 @@ import {
   toggleComplete,
   updateSet,
 } from '../lib/session'
-import { playRestEnd } from '../lib/restAlert'
+import { enableRestAlert, getRestAlertStatus, playRestEnd, type RestAlertStatus } from '../lib/restAlert'
 import {
   equipmentLabels,
   formatDuration,
@@ -117,6 +117,33 @@ function RestPanel({ session, variant }: { session: ActiveSession; variant: 'bar
         Atalho <kbd className="rounded-md border border-line-strong px-1.5 py-0.5 text-xs">Espaço</kbd> marca ✓ na próxima série
       </p>
     </section>
+  )
+}
+
+// Android only: shows until the app may post the rest-over alarm. Needs a tap to open the system prompts.
+function RestAlertSetup() {
+  const [status, setStatus] = useState<RestAlertStatus | null>(null)
+
+  useEffect(() => {
+    const refresh = () => void getRestAlertStatus().then(setStatus)
+    refresh()
+    // Coming back from the system settings screen.
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [])
+
+  if (!status || (status.notifications && status.exact)) return null
+  return (
+    <div role="alert" className="card grid gap-2 border-amber-400/50 p-4">
+      <p className="font-bold text-amber-400">Alarme do descanso desativado</p>
+      <p className="text-sm text-zinc-400">
+        {status.notifications
+          ? 'Falta liberar "Alarmes e lembretes" para o aviso tocar na hora certa com a tela apagada.'
+          : 'Ative as notificações para o DuoFit avisar com som e vibração quando o descanso acabar, mesmo com a tela apagada.'}
+      </p>
+      <button onClick={() => void enableRestAlert().then(setStatus)} className="h-11 rounded-xl bg-amber-400 font-extrabold text-ink">Ativar</button>
+      {!status.notifications && <p className="text-xs text-muted">Se nada aparecer, ative em Configurações › Apps › DuoFit › Notificações.</p>}
+    </div>
   )
 }
 
@@ -458,6 +485,8 @@ export function SessionPage() {
 
       <div className="mx-auto flex w-full max-w-300 flex-1 flex-wrap items-start gap-6 px-3 pt-4 pb-36 lg:px-10 lg:pt-6 lg:pb-10">
         <main className="flex min-w-0 flex-[999_1_520px] flex-col gap-4 lg:max-w-170">
+          <RestAlertSetup />
+
           {notStarted && (
             <div className="card grid gap-3 p-5 text-center">
               <p className="text-zinc-400">Revise os exercícios e inicie quando for treinar.</p>

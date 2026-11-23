@@ -23,7 +23,7 @@ async function prefill(exerciseId: string, count: number): Promise<ActiveSet[]> 
 }
 
 export async function startSession(template: Template) {
-  prepareRestAlert()
+  void prepareRestAlert()
   const exercises: ActiveExercise[] = await Promise.all(
     template.items.map(async (item) => ({
       exerciseId: item.exerciseId,

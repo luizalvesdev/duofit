@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
+import { prepareRestAlert } from '../lib/restAlert'
 import { pauseIfIdle, touchActivity } from '../lib/session'
 
 // Mounted once, app-wide: tracks interaction and auto-pauses an idle workout clock,
 // even if the user left the workout screen. The question itself is shown by SessionPage.
 export function IdleGuard() {
   useEffect(() => {
+    void prepareRestAlert()
     const check = () => void pauseIfIdle()
     // Check first, so the tap that wakes a long-idle app can't count as fresh activity.
     check()
