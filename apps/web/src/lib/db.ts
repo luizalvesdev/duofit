@@ -28,6 +28,10 @@ export type ActiveSession = {
   runningSince: number | null
   restEndsAt: number | null
   restTotalMs?: number
+  // Last time the user touched the app during this workout; drives the "still training?" pause.
+  lastActivityAt?: number
+  // Clock was auto-paused for inactivity and the user hasn't answered yet.
+  idlePrompt?: boolean
   exercises: ActiveExercise[]
 }
 

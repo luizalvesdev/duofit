@@ -47,14 +47,56 @@ export async function startSession(template: Template) {
   })
 }
 
-async function mutate(change: (session: ActiveSession) => void) {
+export const IDLE_LIMIT_MS = 20 * 60 * 1000
+
+// Freshest interaction seen by this page (any tap/key/scroll). Persisted to the session at most every 30 s
+// (mutations persist it immediately), so a reopened app can still tell how long it was left alone.
+let lastActivity = 0
+let persistedAt = 0
+
+export function touchActivity() {
+  const now = Date.now()
+  lastActivity = now
+  if (now - persistedAt > 30_000) {
+    persistedAt = now
+    void db.active.update('active', { lastActivityAt: now })
+  }
+}
+
+async function mutate(change: (session: ActiveSession) => void, touch = true) {
   await db.transaction('rw', db.active, async () => {
     const session = await db.active.get('active')
     if (!session) return
     change(session)
+    if (touch) session.lastActivityAt = lastActivity = Date.now()
     await db.active.put(session)
   })
 }
+
+// Stops the clock at the moment of the last interaction once the user has been idle for IDLE_LIMIT_MS,
+// so the idle time doesn't count as training. The UI then asks whether they're still training.
+export async function pauseIfIdle() {
+  const idleSince = (s: ActiveSession | undefined) => {
+    if (!s?.runningSince || s.idlePrompt) return null
+    const last = Math.max(lastActivity, s.lastActivityAt ?? s.runningSince)
+    return Date.now() - last >= IDLE_LIMIT_MS ? last : null
+  }
+  // Cheap read first: this runs every few seconds and a write would re-render live queries.
+  if (idleSince(await db.active.get('active')) === null) return
+  await mutate((s) => {
+    const last = idleSince(s)
+    if (last === null || !s.runningSince) return
+    s.elapsedMs += Math.max(0, last - s.runningSince)
+    s.runningSince = null
+    s.idlePrompt = true
+  }, false)
+}
+
+export const resumeAfterIdle = () =>
+  mutate((s) => {
+    s.idlePrompt = false
+    s.runningSince ??= Date.now()
+  })
 
 export const updateSet = (exerciseIndex: number, setIndex: number, patch: Partial<ActiveSet>) =>
   mutate((s) => Object.assign(s.exercises[exerciseIndex].sets[setIndex], patch))
@@ -169,6 +211,7 @@ export const elapsedSeconds = (session: Pick<ActiveSession, 'elapsedMs' | 'runni
 
 export const startClock = () =>
   mutate((s) => {
+    s.idlePrompt = false
     if (s.runningSince) return
     s.startedAt ??= new Date().toISOString()
     s.runningSince = Date.now()
@@ -176,6 +219,7 @@ export const startClock = () =>
 
 export const pauseClock = () =>
   mutate((s) => {
+    s.idlePrompt = false
     if (!s.runningSince) return
     s.elapsedMs += Date.now() - s.runningSince
     s.runningSince = null

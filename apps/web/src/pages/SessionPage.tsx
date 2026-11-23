@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { PreviewThumb } from '../components/ExercisePreview'
 import { Collapse } from '../components/Collapse'
+import { useDismiss } from '../lib/useDismiss'
 import { Icon } from '../components/Icon'
 import { NumericInput } from '../components/NumericInput'
 import { SwipeToDelete } from '../components/SwipeToDelete'
@@ -19,6 +20,7 @@ import {
   removeExercise,
   removeSet,
   replaceExercise,
+  resumeAfterIdle,
   setExerciseRest,
   setRest,
   startClock,
@@ -115,6 +117,31 @@ function RestPanel({ session, variant }: { session: ActiveSession; variant: 'bar
         Atalho <kbd className="rounded-md border border-line-strong px-1.5 py-0.5 text-xs">Espaço</kbd> marca ✓ na próxima série
       </p>
     </section>
+  )
+}
+
+// The clock was auto-paused after 20 min without interaction (see IdleGuard).
+function IdleDialog({ onFinish }: { onFinish: () => void }) {
+  const { closing, dismiss } = useDismiss()
+  return (
+    <div
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="idle-title"
+      data-closing={closing || undefined}
+      className="anim-backdrop fixed inset-0 z-60 grid place-items-center bg-black/80 p-4"
+    >
+      <div data-closing={closing || undefined} className="anim-dialog card grid w-full max-w-sm gap-4 p-6 text-center">
+        <h2 id="idle-title" className="num text-3xl font-bold uppercase">Ainda está treinando?</h2>
+        <p className="text-sm text-zinc-400">Ficou 20 minutos sem mexer, então pausei o cronômetro. O tempo parado não foi contado.</p>
+        <button onClick={() => dismiss(() => void resumeAfterIdle())} className="h-13 rounded-[14px] bg-lime-400 font-extrabold text-ink">
+          Sim, continuar
+        </button>
+        <button onClick={onFinish} className="h-12 rounded-[14px] border border-line-strong font-bold">
+          Finalizar treino
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -483,6 +510,7 @@ export function SessionPage() {
       </div>
 
       <RestPanel session={session} variant="bar" />
+      {session.idlePrompt && <IdleDialog onFinish={finish} />}
       {swapping !== null && (
         <ExercisePicker
           onClose={() => setSwapping(null)}

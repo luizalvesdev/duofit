@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { AuthProvider } from './auth/AuthContext'
 import { GuestOnly, RequireAuth } from './auth/guards'
 import { AppLayout } from './components/AppLayout'
+import { IdleGuard } from './components/IdleGuard'
 import { RouteTransition } from './components/RouteTransition'
 import './index.css'
 import { AuthPage } from './pages/AuthPage'
@@ -38,6 +39,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <IdleGuard />
         <Routes>
           <Route element={<GuestOnly />}>
             <Route path="/login" element={<AuthPage mode="login" />} />
