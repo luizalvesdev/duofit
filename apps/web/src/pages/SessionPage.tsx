@@ -4,6 +4,7 @@ import { Navigate, useNavigate } from 'react-router'
 import { ExercisePicker } from '../components/ExercisePicker'
 import { PreviewThumb } from '../components/ExercisePreview'
 import { Collapse } from '../components/Collapse'
+import { useBackClose } from '../lib/backStack'
 import { useDismiss } from '../lib/useDismiss'
 import { Icon } from '../components/Icon'
 import { NumericInput } from '../components/NumericInput'
@@ -150,6 +151,7 @@ function RestAlertSetup() {
 // The clock was auto-paused after 20 min without interaction (see IdleGuard).
 function IdleDialog({ onFinish }: { onFinish: () => void }) {
   const { closing, dismiss } = useDismiss()
+  useBackClose(() => {}) // must be answered: back does nothing here
   return (
     <div
       role="alertdialog"

@@ -8,6 +8,7 @@ import { Button, ErrorText, Input } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
 import { foodLabel } from '../../lib/diet'
 import { AI_DIET_DRAFT_DISCLAIMER, aiErrorMessage, type AiProfile, type DuoDietDraft, type Insight } from '../../lib/ai'
+import { useBackClose } from '../../lib/backStack'
 import { useDismiss } from '../../lib/useDismiss'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 import { DuoTabs } from './DuoPage'
@@ -120,6 +121,7 @@ function ImproveMealModal({
   onClose: () => void
 }) {
   const { closing, dismiss } = useDismiss()
+  useBackClose(() => (mode === 'scan' ? setMode('none') : dismiss(onClose)))
   const [instruction, setInstruction] = useState('')
   const [product, setProduct] = useState<Product | null>(null)
   const [mode, setMode] = useState<'none' | 'manual' | 'scan'>('none')

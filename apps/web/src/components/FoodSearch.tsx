@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../lib/api'
+import { useBackClose } from '../lib/backStack'
 import { useDismiss } from '../lib/useDismiss'
 import { foodLabel, forGrams, round, type Food } from '../lib/diet'
 import { NumericInput } from './NumericInput'
@@ -167,6 +168,7 @@ function CreateFood({
 
 export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (food: Food, grams: number) => Promise<void> | void; onClose: () => void }) {
   const { closing, dismiss } = useDismiss()
+  useBackClose(() => (scanning ? setScanning(false) : selected ? setSelected(null) : creating ? setCreating(false) : dismiss(onClose)))
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Food[] | null>(null)
   const [recent, setRecent] = useState<Food[]>([])

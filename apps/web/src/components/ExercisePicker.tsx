@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import { db } from '../lib/db'
 import { refreshCache } from '../lib/sync'
+import { useBackClose } from '../lib/backStack'
 import { useDismiss } from '../lib/useDismiss'
 import { equipmentLabels, exerciseImage, muscleLabels, type Equipment, type Exercise, type Muscle } from '../lib/workout'
 import { Button, ErrorText, Field, Input, Select } from './ui'
@@ -79,6 +80,8 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
   const [creating, setCreating] = useState(false)
   const { closing, dismiss } = useDismiss()
   const close = () => dismiss(onClose)
+  // While creating, back returns to the list; otherwise it closes the picker.
+  useBackClose(() => (creating ? setCreating(false) : close()))
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())

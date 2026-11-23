@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useBackClose } from '../lib/backStack'
 import { useDismiss } from '../lib/useDismiss'
 import { equipmentLabels, exerciseImage, muscleLabels, type Exercise } from '../lib/workout'
 import { ExerciseThumb } from './ExercisePicker'
@@ -16,6 +17,7 @@ function ExercisePreview({ exercise, onClose }: { exercise: Exercise; onClose: (
   const animated = Boolean(second) && secondOk
   const { closing, dismiss } = useDismiss()
   const close = () => dismiss(onClose)
+  useBackClose(close)
 
   useEffect(() => {
     if (!animated) return
