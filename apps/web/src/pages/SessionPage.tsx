@@ -1,7 +1,9 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router'
-import { ExercisePicker, ExerciseThumb } from '../components/ExercisePicker'
+import { ExercisePicker } from '../components/ExercisePicker'
+import { PreviewThumb } from '../components/ExercisePreview'
+import { Collapse } from '../components/Collapse'
 import { Icon } from '../components/Icon'
 import { NumericInput } from '../components/NumericInput'
 import { SwipeToDelete } from '../components/SwipeToDelete'
@@ -16,11 +18,14 @@ import {
   pauseClock,
   removeExercise,
   removeSet,
+  replaceExercise,
+  setExerciseRest,
   setRest,
   startClock,
   toggleComplete,
   updateSet,
 } from '../lib/session'
+import { playRestEnd } from '../lib/restAlert'
 import {
   equipmentLabels,
   formatDuration,
@@ -63,7 +68,7 @@ function RestPanel({ session, variant }: { session: ActiveSession; variant: 'bar
   const remaining = endsAt ? Math.ceil((endsAt - now) / 1000) : null
 
   useEffect(() => {
-    if (remaining === 0) navigator.vibrate?.([200, 100, 200])
+    if (remaining === 0) playRestEnd()
   }, [remaining])
 
   const total = (session.restTotalMs ?? 90_000) / 1000
@@ -74,9 +79,9 @@ function RestPanel({ session, variant }: { session: ActiveSession; variant: 'bar
   const adjust = (delta: number) => endsAt && setRest(endsAt + delta)
 
   if (variant === 'bar') {
-    if (!active) return null
+    // Always mounted so it can slide in and out; `inert` while hidden.
     return (
-      <div className={`fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] lg:hidden ${done ? 'border-lime-400 bg-lime-400 text-ink' : 'border-line-strong bg-surface'}`}>
+      <div inert={!active} className={`fixed inset-x-0 bottom-0 z-40 border-t pb-[env(safe-area-inset-bottom)] transition-[transform,background-color] duration-300 ease-out lg:hidden ${active ? 'translate-y-0' : 'translate-y-full'} ${done ? 'border-lime-400 bg-lime-400 text-ink' : 'border-line-strong bg-surface'}`}>
         <div className="h-1 bg-surface-2"><div className="h-full bg-lime-400" style={{ width: `${pct}%` }} /></div>
         <div className="mx-auto flex max-w-md items-center justify-between gap-2 px-4 py-3">
           <button onClick={() => adjust(-15_000)} className={`num h-13 w-16 rounded-[14px] text-xl font-bold ${done ? 'bg-ink/10' : 'border border-line-strong bg-surface-2'}`}>−15</button>
@@ -170,7 +175,7 @@ function SetRow({ exercise, block, index, setIndex, number, last, missing, onCom
             onClick={onComplete}
             aria-label="Concluir série"
             aria-pressed={done}
-            className={`grid h-11 w-11 place-items-center justify-self-center rounded-xl ${done ? (isPr ? 'bg-pr text-pr-ink' : 'bg-lime-400 text-ink') : 'border-2 border-line-strong text-transparent hover:text-zinc-600'}`}
+            className={`grid h-11 w-11 place-items-center justify-self-center rounded-xl ${done ? `animate-pop ${isPr ? 'bg-pr text-pr-ink' : 'bg-lime-400 text-ink'}` : 'border-2 border-line-strong text-transparent hover:text-zinc-600'}`}
           >
             <Icon name="check" size={22} strokeWidth={3.2} />
           </button>
@@ -184,7 +189,7 @@ function SetRow({ exercise, block, index, setIndex, number, last, missing, onCom
         </p>
       )}
 
-      {menu && (
+      <Collapse open={menu}>
         <div className="flex flex-wrap gap-2 px-3 pb-3 pl-15.5">
           {setTypeOrder.map((type) => (
             <button
@@ -208,18 +213,19 @@ function SetRow({ exercise, block, index, setIndex, number, last, missing, onCom
             Remover série
           </button>
         </div>
-      )}
+      </Collapse>
     </div>
   )
 }
 
-function ExerciseCard({ exercise, block, index, last, missing, onComplete }: {
+function ExerciseCard({ exercise, block, index, last, missing, onComplete, onSwap }: {
   exercise: Exercise | undefined
   block: ActiveExercise
   index: number
   last: LastPerformance | undefined
   missing: { setIndex: number; fields: ('weight' | 'reps')[] } | null
   onComplete: (setIndex: number) => void
+  onSwap: () => void
 }) {
   const [menu, setMenu] = useState(false)
   const prSet = block.sets.find((s) => s.records.length > 0)
@@ -243,7 +249,7 @@ function ExerciseCard({ exercise, block, index, last, missing, onComplete }: {
       )}
 
       <div className="flex items-center gap-3 px-3 pt-3 pb-2">
-        {exercise ? <ExerciseThumb exercise={exercise} size="h-13 w-13 rounded-[14px]" /> : <div className="h-13 w-13 rounded-[14px] bg-surface-2" />}
+        {exercise ? <PreviewThumb exercise={exercise} size="h-13 w-13 rounded-[14px]" /> : <div className="h-13 w-13 rounded-[14px] bg-surface-2" />}
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h2 className="text-base font-semibold">{exercise?.name ?? '…'}</h2>
           <span className="text-[13px] text-zinc-400">
@@ -256,16 +262,35 @@ function ExerciseCard({ exercise, block, index, last, missing, onComplete }: {
         </button>
       </div>
 
-      {menu && (
-        <div className="px-3 pb-2">
-          <button
-            onClick={() => confirm('Remover este exercício do treino?') && removeExercise(index)}
-            className="h-10 rounded-xl border border-red-500/40 px-4 text-sm font-semibold text-red-400"
-          >
-            Remover exercício
-          </button>
+      <Collapse open={menu}>
+        <div className="grid gap-2 px-3 pb-2">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-surface-2 px-3 py-1.5">
+            <span className="text-sm font-semibold">Descanso</span>
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => setExerciseRest(index, block.restSeconds - 15)} aria-label="Menos 15 segundos" className="num h-10 w-12 rounded-lg border border-line-strong text-lg font-bold">−15</button>
+              <span className="num w-16 text-center text-xl font-bold">{formatDuration(block.restSeconds)}</span>
+              <button onClick={() => setExerciseRest(index, block.restSeconds + 15)} aria-label="Mais 15 segundos" className="num h-10 w-12 rounded-lg border border-line-strong text-lg font-bold">+15</button>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setMenu(false)
+                onSwap()
+              }}
+              className="h-10 flex-1 rounded-xl border border-line-strong px-4 text-sm font-semibold"
+            >
+              Trocar exercício
+            </button>
+            <button
+              onClick={() => confirm('Remover este exercício do treino?') && removeExercise(index)}
+              className="h-10 flex-1 rounded-xl border border-red-500/40 px-4 text-sm font-semibold text-red-400"
+            >
+              Remover exercício
+            </button>
+          </div>
         </div>
-      )}
+      </Collapse>
 
       <div className="grid grid-cols-[44px_minmax(0,1fr)_76px_64px_48px] gap-1.5 px-3 pb-1 text-[11px] font-bold tracking-[0.04em] text-muted uppercase">
         <span className="text-center">Série</span><span>Anterior</span><span className="text-center">kg</span><span className="text-center">Reps</span><span className="text-center">✓</span>
@@ -298,6 +323,7 @@ export function SessionPage() {
   const exercises = useLiveQuery(() => db.exercises.toArray(), [], [])
   const lastPerformance = useLiveQuery(() => db.lastPerformance.toArray(), [], [])
   const [picking, setPicking] = useState(false)
+  const [swapping, setSwapping] = useState<number | null>(null)
   const [missing, setMissing] = useState<{ index: number; setIndex: number; fields: ('weight' | 'reps')[] } | null>(null)
   const [summary, setSummary] = useState<{ sets: number; records: number } | null>(null)
   const now = useNow()
@@ -424,6 +450,7 @@ export function SessionPage() {
               last={lastById.get(block.exerciseId)}
               missing={missing?.index === index ? missing : null}
               onComplete={(setIndex) => complete(index, setIndex)}
+              onSwap={() => setSwapping(index)}
             />
           ))}
 
@@ -456,6 +483,15 @@ export function SessionPage() {
       </div>
 
       <RestPanel session={session} variant="bar" />
+      {swapping !== null && (
+        <ExercisePicker
+          onClose={() => setSwapping(null)}
+          onSelect={(exercise) => {
+            replaceExercise(swapping, exercise.id)
+            setSwapping(null)
+          }}
+        />
+      )}
       {picking && (
         <ExercisePicker
           onClose={() => setPicking(false)}

@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
-import { ExerciseThumb } from '../components/ExercisePicker'
+import { PreviewThumb } from '../components/ExercisePreview'
 import { Icon } from '../components/Icon'
 import { db } from '../lib/db'
 import { startSession } from '../lib/session'
@@ -46,7 +46,7 @@ export function TemplatePreviewPage() {
           const exercise = byId.get(item.exerciseId)
           return (
             <li key={`${item.exerciseId}-${index}`} className="card flex items-center gap-3 p-3">
-              {exercise && <ExerciseThumb exercise={exercise} />}
+              {exercise && <PreviewThumb exercise={exercise} size="h-12 w-12 rounded-lg" />}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{exercise?.name ?? '…'}</p>
                 <p className="text-sm text-zinc-400">

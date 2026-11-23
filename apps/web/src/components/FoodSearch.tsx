@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, ApiError } from '../lib/api'
+import { useDismiss } from '../lib/useDismiss'
 import { foodLabel, forGrams, round, type Food } from '../lib/diet'
 import { NumericInput } from './NumericInput'
 import { Button, ErrorText, Field, Input } from './ui'
@@ -165,6 +166,7 @@ function CreateFood({
 }
 
 export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (food: Food, grams: number) => Promise<void> | void; onClose: () => void }) {
+  const { closing, dismiss } = useDismiss()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<Food[] | null>(null)
   const [recent, setRecent] = useState<Food[]>([])
@@ -242,7 +244,7 @@ export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (f
   const list = results ?? recent
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div data-closing={closing || undefined} className="anim-sheet fixed inset-0 z-50 flex flex-col overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {scanning ? (
         <Scanner onCancel={() => setScanning(false)} onCode={onCode} />
       ) : creating ? (
@@ -272,7 +274,7 @@ export function FoodSearch({ title, onAdd, onClose }: { title: string; onAdd: (f
       ) : (
         <>
           <header className="flex items-center gap-3 border-b border-zinc-900 p-4">
-            <button onClick={onClose} className="shrink-0 text-zinc-400">Fechar</button>
+            <button onClick={() => dismiss(onClose)} className="shrink-0 text-zinc-400">Fechar</button>
             <Input autoFocus placeholder="Buscar alimento (ex: frango grelhado)" value={query} onChange={(e) => setQuery(e.target.value)} />
             <button onClick={() => { setNotice(''); setScanning(true) }} className="shrink-0 rounded-lg border border-zinc-700 px-3 py-2 text-sm text-lime-400" aria-label="Escanear código de barras">
               Escanear

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { api } from '../lib/api'
 import { db } from '../lib/db'
 import { refreshCache } from '../lib/sync'
+import { useDismiss } from '../lib/useDismiss'
 import { equipmentLabels, exerciseImage, muscleLabels, type Equipment, type Exercise, type Muscle } from '../lib/workout'
 import { Button, ErrorText, Field, Input, Select } from './ui'
 
@@ -76,6 +77,8 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
   const [query, setQuery] = useState('')
   const [muscle, setMuscle] = useState<Muscle | null>(null)
   const [creating, setCreating] = useState(false)
+  const { closing, dismiss } = useDismiss()
+  const close = () => dismiss(onClose)
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim())
@@ -86,16 +89,16 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
 
   if (creating) {
     return (
-      <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+      <div data-closing={closing || undefined} className="anim-sheet fixed inset-0 z-50 overflow-y-auto bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
         <CreateExercise initialName={query} onCreated={onSelect} onCancel={() => setCreating(false)} />
       </div>
     )
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+    <div data-closing={closing || undefined} className="anim-sheet fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       <header className="flex items-center gap-3 border-b border-zinc-900 p-4">
-        <button onClick={onClose} className="shrink-0 text-zinc-400">Fechar</button>
+        <button onClick={close} className="shrink-0 text-zinc-400">Fechar</button>
         <Input autoFocus placeholder="Buscar exercício" value={query} onChange={(e) => setQuery(e.target.value)} />
       </header>
 
@@ -117,7 +120,7 @@ export function ExercisePicker({ onSelect, onClose }: { onSelect: (exercise: Exe
         {filtered.map((exercise) => (
           <li key={exercise.id}>
             <button
-              onClick={() => onSelect(exercise)}
+              onClick={() => dismiss(() => onSelect(exercise))}
               className="flex w-full items-center gap-3 border-b border-zinc-900 py-3 text-left"
             >
               <ExerciseThumb exercise={exercise} />

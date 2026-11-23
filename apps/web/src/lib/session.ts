@@ -1,4 +1,5 @@
 import { db, type ActiveExercise, type ActiveSession, type ActiveSet } from './db'
+import { cancelRestAlert, prepareRestAlert, scheduleRestAlert } from './restAlert'
 import { flushOutbox } from './sync'
 import { detectRecords, mergeBest, type Best, type RecordKind, type SetType, type Template } from './workout'
 
@@ -22,6 +23,7 @@ async function prefill(exerciseId: string, count: number): Promise<ActiveSet[]> 
 }
 
 export async function startSession(template: Template) {
+  prepareRestAlert()
   const exercises: ActiveExercise[] = await Promise.all(
     template.items.map(async (item) => ({
       exerciseId: item.exerciseId,
@@ -116,6 +118,7 @@ export async function toggleComplete(
       s.runningSince = Date.now()
     }
   })
+  void scheduleRestAlert(Date.now() + exercise.restSeconds * 1000)
   return { ok: true, records }
 }
 
@@ -137,6 +140,24 @@ export async function addExercise(exerciseId: string) {
     s.exercises.push({ exerciseId, restSeconds: DEFAULT_REST, repMin: null, repMax: null, sets })
   })
 }
+
+// Swap the exercise but keep the slot: same number of sets, rest and rep range.
+// Sets are re-prefilled from the new exercise's history, so loads from the old one don't leak over.
+export async function replaceExercise(exerciseIndex: number, exerciseId: string) {
+  const session = await db.active.get('active')
+  const count = session?.exercises[exerciseIndex]?.sets.length ?? 3
+  const sets = await prefill(exerciseId, count)
+  await mutate((s) => {
+    const block = s.exercises[exerciseIndex]
+    if (block) Object.assign(block, { exerciseId, sets })
+  })
+}
+
+export const setExerciseRest = (exerciseIndex: number, restSeconds: number) =>
+  mutate((s) => {
+    const block = s.exercises[exerciseIndex]
+    if (block) block.restSeconds = Math.min(600, Math.max(0, Math.round(restSeconds)))
+  })
 
 export const removeExercise = (exerciseIndex: number) =>
   mutate((s) => {
@@ -160,16 +181,23 @@ export const pauseClock = () =>
     s.runningSince = null
   })
 
-export const setRest = (restEndsAt: number | null) =>
-  mutate((s) => {
+export async function setRest(restEndsAt: number | null) {
+  await mutate((s) => {
     s.restEndsAt = restEndsAt
   })
+  if (restEndsAt === null) void cancelRestAlert()
+  else void scheduleRestAlert(restEndsAt)
+}
 
-export const discardSession = () => db.active.delete('active')
+export async function discardSession() {
+  void cancelRestAlert()
+  await db.active.delete('active')
+}
 
 export async function finishSession() {
   const session = await db.active.get('active')
   if (!session) return
+  void cancelRestAlert()
 
   const finishedAt = new Date().toISOString()
   const durationSeconds = elapsedSeconds(session)

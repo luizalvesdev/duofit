@@ -8,6 +8,7 @@ import { Button, ErrorText, Input } from '../../components/ui'
 import { api, ApiError } from '../../lib/api'
 import { foodLabel } from '../../lib/diet'
 import { AI_DIET_DRAFT_DISCLAIMER, aiErrorMessage, type AiProfile, type DuoDietDraft, type Insight } from '../../lib/ai'
+import { useDismiss } from '../../lib/useDismiss'
 import { Loading, Offline, useApi } from '../../lib/useApi'
 import { DuoTabs } from './DuoPage'
 import type { Campaign } from './types'
@@ -118,6 +119,7 @@ function ImproveMealModal({
   onDone: (output: DuoDietDraft) => void
   onClose: () => void
 }) {
+  const { closing, dismiss } = useDismiss()
   const [instruction, setInstruction] = useState('')
   const [product, setProduct] = useState<Product | null>(null)
   const [mode, setMode] = useState<'none' | 'manual' | 'scan'>('none')
@@ -180,8 +182,8 @@ function ImproveMealModal({
   if (mode === 'scan') return <div className="fixed inset-0 z-50 bg-zinc-950"><Scanner onCancel={() => setMode('none')} onCode={fromBarcode} /></div>
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/70 p-4" onClick={onClose}>
-      <div className="card grid w-full max-w-sm gap-4 p-5" onClick={(e) => e.stopPropagation()}>
+    <div data-closing={closing || undefined} className="anim-backdrop fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-black/70 p-4" onClick={() => dismiss(onClose)}>
+      <div data-closing={closing || undefined} className="anim-dialog card grid w-full max-w-sm gap-4 p-5" onClick={(e) => e.stopPropagation()}>
         <h2 className="font-semibold">Melhorar — {mealName}</h2>
         <p className="text-sm text-zinc-500">O que você quer mudar nessa refeição?</p>
         <Input autoFocus value={instruction} maxLength={300} onChange={(e) => setInstruction(e.target.value)} placeholder="Ex.: troque por 2 fatias de pão integral com atum" />
@@ -209,7 +211,7 @@ function ImproveMealModal({
 
         <ErrorText>{error}</ErrorText>
         <Button onClick={submit} disabled={saving || !!busy}>{saving ? 'Melhorando…' : 'Melhorar refeição'}</Button>
-        <button onClick={onClose} className="text-sm text-zinc-500">Cancelar</button>
+        <button onClick={() => dismiss(onClose)} className="text-sm text-zinc-500">Cancelar</button>
       </div>
     </div>
   )
