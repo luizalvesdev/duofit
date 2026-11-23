@@ -56,23 +56,27 @@ function TodayWorkout() {
   }
 
   return (
-    <button
-      onClick={async () => {
-        await startSession(template)
-        navigate('/treino')
-      }}
-      className="grid gap-4 rounded-3xl bg-lime-400 p-6 text-left text-ink"
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-extrabold tracking-[0.08em] uppercase">Treino de hoje</span>
-        <span className="text-sm font-semibold opacity-75">{template.items.length} exercícios</span>
-      </div>
-      <span className="num text-4xl leading-none font-bold lg:text-[44px]">{template.name}</span>
-      <p className="text-sm leading-relaxed font-medium opacity-85">
-        {template.items.map((i) => names.get(i.exerciseId) ?? '…').join(' · ')}
-      </p>
-      <span className="flex h-13 items-center gap-2.5 self-start rounded-[14px] bg-ink px-6 font-extrabold text-lime-400"><Icon name="play" size={18} />Começar treino</span>
-    </button>
+    <div className="grid gap-4 rounded-3xl bg-lime-400 p-6 text-ink">
+      <Link to={`/treinos/${template.id}/ver`} className="grid gap-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-extrabold tracking-[0.08em] uppercase">Treino de hoje</span>
+          <span className="text-sm font-semibold opacity-75">{template.items.length} exercícios</span>
+        </div>
+        <span className="num text-4xl leading-none font-bold lg:text-[44px]">{template.name}</span>
+        <p className="text-sm leading-relaxed font-medium opacity-85">
+          {template.items.map((i) => names.get(i.exerciseId) ?? '…').join(' · ')}
+        </p>
+      </Link>
+      <button
+        onClick={async () => {
+          await startSession(template)
+          navigate('/treino')
+        }}
+        className="flex h-13 items-center gap-2.5 self-start rounded-[14px] bg-ink px-6 font-extrabold text-lime-400"
+      >
+        <Icon name="play" size={18} />Começar treino
+      </button>
+    </div>
   )
 }
 

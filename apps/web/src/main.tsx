@@ -30,6 +30,7 @@ import { RecordsTab } from './pages/progress/RecordsTab'
 import { SessionDetailPage } from './pages/progress/SessionDetailPage'
 import { SessionPage } from './pages/SessionPage'
 import { TemplateEditorPage } from './pages/TemplateEditorPage'
+import { TemplatePreviewPage } from './pages/TemplatePreviewPage'
 import { WorkoutsPage } from './pages/WorkoutsPage'
 
 createRoot(document.getElementById('root')!).render(
@@ -74,6 +75,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/perfil" element={<ProfilePage />} />
             <Route path="/treinos/nova" element={<TemplateEditorPage />} />
             <Route path="/treinos/:id" element={<TemplateEditorPage />} />
+            <Route path="/treinos/:id/ver" element={<TemplatePreviewPage />} />
             <Route path="/treino" element={<SessionPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

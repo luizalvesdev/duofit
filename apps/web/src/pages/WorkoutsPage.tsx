@@ -54,7 +54,7 @@ export function WorkoutsPage() {
       {sorted.map((template) => (
         <section key={template.id} className="grid gap-3 card p-4">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <Link to={`/treinos/${template.id}/ver`} className="min-w-0 flex-1">
               <h2 className="text-lg font-semibold">{template.name}</h2>
               <p className="text-sm text-zinc-500">
                 {template.weekdays.length
@@ -62,12 +62,12 @@ export function WorkoutsPage() {
                   : 'Sem dia fixo'}
                 {template.weekdays.includes(today) && <span className="ml-2 text-lime-400">hoje</span>}
               </p>
-            </div>
+            </Link>
             <Link to={`/treinos/${template.id}`} className="text-sm text-zinc-400">Editar</Link>
           </div>
-          <p className="text-sm text-zinc-400">
+          <Link to={`/treinos/${template.id}/ver`} className="text-sm text-zinc-400">
             {template.items.map((item) => names.get(item.exerciseId) ?? '…').join(', ')}
-          </p>
+          </Link>
           <button onClick={() => start(template)} className="rounded-xl bg-zinc-800 py-3 font-semibold text-lime-400">
             Começar
           </button>
